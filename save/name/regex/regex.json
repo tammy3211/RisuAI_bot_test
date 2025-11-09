@@ -1,0 +1,37 @@
+[
+  {
+    "comment": "이모티콘을 텍스트로 변환",
+    "in": ":(\\)|\\(|D|P|O)",
+    "out": "{emoticon_to_text}",
+    "type": "editinput",
+    "ableFlag": ["regex"]
+  },
+  {
+    "comment": "행동 묘사 강조",
+    "in": "\\*([^*]+)\\*",
+    "out": "{action_emphasis}",
+    "type": "editoutput",
+    "ableFlag": []
+  },
+  {
+    "comment": "특정 단어 필터링",
+    "in": "(비속어1|비속어2|비속어3)",
+    "out": "{profanity_filter}",
+    "type": "editinput",
+    "ableFlag": ["regex"]
+  },
+  {
+    "comment": "시간 표현 정규화",
+    "in": "(\\d{1,2})시",
+    "out": "{time_normalization}",
+    "type": "editinput",
+    "ableFlag": ["regex"]
+  },
+  {
+    "comment": "사용자 입력 자동 수정 - 이중 띄어쓰기",
+    "in": "  +",
+    "out": "{double_space_fix}",
+    "type": "editinput",
+    "ableFlag": ["regex"]
+  }
+]

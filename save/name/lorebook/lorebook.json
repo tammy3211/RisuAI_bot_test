@@ -1,0 +1,58 @@
+[
+  {
+    "key": "세계, 세계관, world, setting",
+    "comment": "세계관 설정",
+    "insertorder": 100,
+    "mode": "normal",
+    "alwaysActive": false,
+    "selective": true,
+    "secondkey": "세계관 상세, 설정, 배경",
+    "content": "{world_setting}",
+    "useRegex": false,
+    "extentions": {
+      "risu_case_sensitive": false
+    }
+  },
+  {
+    "key": "캐릭터, 주인공, character, protagonist",
+    "comment": "캐릭터 배경",
+    "insertorder": 90,
+    "mode": "normal",
+    "alwaysActive": false,
+    "selective": true,
+    "secondkey": "과거, background, history, 어린시절",
+    "content": "{character_background}",
+    "useRegex": false,
+    "extentions": {
+      "risu_case_sensitive": false
+    }
+  },
+  {
+    "key": "장소, 위치, location, place",
+    "comment": "주요 장소 - 나이트 시티",
+    "insertorder": 80,
+    "mode": "normal",
+    "alwaysActive": false,
+    "selective": true,
+    "secondkey": "나이트 시티, Night City, 도시, city",
+    "content": "{location_nightcity}",
+    "useRegex": false,
+    "extentions": {
+      "risu_case_sensitive": false
+    }
+  },
+  {
+    "key": "규칙, 지침, rules, guidelines",
+    "comment": "중요한 규칙 (항상 활성화)",
+    "insertorder": 100,
+    "mode": "normal",
+    "alwaysActive": true,
+    "selective": false,
+    "secondkey": "",
+    "content": "{important_rules}",
+    "useRegex": false,
+    "extentions": {
+      "risu_case_sensitive": false
+    }
+  }
+]

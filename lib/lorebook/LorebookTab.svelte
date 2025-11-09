@@ -1,0 +1,161 @@
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import BotSettings from '../shared/BotSettings.svelte';
+  import { editorState, saveEditorState } from '../shared/editorState.svelte';
+  
+  onMount(async () => {
+    await loadSavedBots();
+  });
+  
+  async function loadSavedBots() {
+    try {
+      const savePath = './save';
+      const response = await fetch(savePath);
+      const html = await response.text();
+      
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const links = Array.from(doc.querySelectorAll('a'));
+      
+      const folders = links
+        .map(link => link.getAttribute('href'))
+        .filter(href => href && href.endsWith('/') && href !== '../')
+        .map(href => href!.replace('/', ''));
+      
+      if (folders.length > 0) {
+        editorState.savedBots = folders;
+      } else {
+        editorState.savedBots = ['name'];
+      }
+    } catch (err) {
+      console.error('Failed to load saved bots:', err);
+      editorState.savedBots = ['name'];
+    }
+  }
+  
+  async function loadBotData() {
+    console.log('[LorebookTab] loadBotData called - using shared botLoader');
+    // botLoader.svelte.ts에서 이미 처리했으므로 여기서는 추가 작업 불필요
+  }
+</script>
+
+<div class="lorebook-tab">
+  <div class="info-panel">
+    <h4>📚 Lorebook 관리</h4>
+    <ul>
+      <li>JSON 파일로 메타데이터를 관리하고, MD 파일로 실제 내용을 작성합니다</li>
+      <li>각 로어북 항목은 별도의 MD 파일로 관리되어 버전 관리가 쉽습니다</li>
+      <li><code>lorebook.json</code>에서 키워드, 우선순위 등을 설정합니다</li>
+    </ul>
+  </div>
+
+  <div class="lorebook-container">
+    <!-- Left Panel: Lorebook Items -->
+    <div class="lorebook-left">
+      <div class="section">
+        <div class="section-title">로어북 항목 목록</div>
+        <p class="loading-text">로어북 기능 준비 중...</p>
+      </div>
+    </div>
+
+    <!-- Right Panel: Settings -->
+    <div class="lorebook-right">
+      <BotSettings onLoadBot={loadBotData} />
+    </div>
+  </div>
+</div>
+
+<style>
+  .lorebook-tab {
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .info-panel {
+    background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+    padding: 25px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    border-left: 5px solid #667eea;
+  }
+
+  .info-panel h4 {
+    font-size: 1.3em;
+    color: #667eea;
+    margin-bottom: 15px;
+  }
+
+  .info-panel ul {
+    list-style: none;
+    padding-left: 0;
+  }
+
+  .info-panel li {
+    padding: 8px 0;
+    padding-left: 25px;
+    position: relative;
+    line-height: 1.6;
+  }
+
+  .info-panel li:before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: #667eea;
+    font-weight: bold;
+  }
+
+  .lorebook-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+  }
+
+  .section {
+    background: #f8f9fa;
+    padding: 25px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+  }
+
+  .section-title {
+    font-size: 1.2em;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #dee2e6;
+  }
+
+  .loading-text {
+    color: #6c757d;
+    font-style: italic;
+    padding: 20px;
+    text-align: center;
+  }
+
+  code {
+    background: #f8f9fa;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.9em;
+    color: #d63384;
+  }
+
+  @media (max-width: 1024px) {
+    .lorebook-container {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
