@@ -1,6 +1,8 @@
 // RisuAI Character Tester - Svelte Entry Point
 // Setup global variables to prevent circular dependency issues
 
+import './styles.css';
+
 console.log('🔧 Setting up environment...');
 
 // CRITICAL: Monkey-patch to break circular dependency

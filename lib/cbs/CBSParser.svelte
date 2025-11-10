@@ -20,165 +20,47 @@
   ];
 </script>
 
-<div class="parser-panel">
-  <div class="section">
-    <div class="section-title">📝 Input (CBS Script)</div>
-    <textarea 
-      class="cbs-textarea"
+<div class="flex flex-col space-y-5">
+  <div class="rounded-xl bg-gray-100 p-6">
+    <div class="mb-5 border-b-2 border-slate-200 pb-2.5 text-lg font-semibold text-slate-600">📝 Input (CBS Script)</div>
+    <textarea
+      class="min-h-[200px] w-full resize-y rounded-lg border-2 border-slate-200 bg-white px-4 py-3.5 font-mono text-sm leading-relaxed text-slate-600 transition focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
       bind:value={cbsInput}
       placeholder="CBS 스크립트를 입력하세요... 예: Hello {'{{user}}'}, my name is {'{{char}}'}!"
     ></textarea>
-    <button class="btn btn-success" onclick={onParse}>
+    <button
+      class="mt-3 w-full rounded-md bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-emerald-600"
+      onclick={onParse}
+    >
       ▶️ 파싱 실행
     </button>
   </div>
   
-  <div class="section">
-    <div class="section-title">✨ Result (Parsed Output)</div>
+  <div class="rounded-xl bg-gray-100 p-6">
+    <div class="mb-5 border-b-2 border-slate-200 pb-2.5 text-lg font-semibold text-slate-600">✨ Result (Parsed Output)</div>
     {#if cbsError}
-      <div class="error-box">
+      <div class="rounded-lg border-2 border-rose-500 bg-rose-50 px-4 py-3.5 text-rose-600">
         <strong>❌ Error:</strong>
-        <pre>{cbsError}</pre>
+        <pre class="mt-2 overflow-x-auto rounded bg-white px-3 py-2 text-sm">{cbsError}</pre>
       </div>
     {:else}
-      <div class="output-box">
+      <div class="min-h-[100px] whitespace-pre-wrap break-words rounded-lg border-2 border-emerald-500 bg-white px-4 py-3.5 font-mono text-sm leading-relaxed text-slate-600">
         {cbsOutput || '파싱 버튼을 눌러 결과를 확인하세요...'}
       </div>
     {/if}
   </div>
   
-  <div class="section">
-    <div class="section-title">💡 CBS 예제</div>
-    <div class="example-buttons">
+  <div class="rounded-xl bg-gray-100 p-6">
+    <div class="mb-5 border-b-2 border-slate-200 pb-2.5 text-lg font-semibold text-slate-600">💡 CBS 예제</div>
+    <div class="flex flex-wrap gap-2.5">
       {#each examples as example}
-        <button class="example-btn" onclick={() => cbsInput = example.code}>
+        <button
+          class="rounded-md bg-gradient-to-r from-indigo-500 to-purple-500 px-4 py-2.5 text-sm font-semibold text-white shadow transition hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0"
+          onclick={() => cbsInput = example.code}
+        >
           {example.label}
         </button>
       {/each}
     </div>
   </div>
 </div>
-
-<style>
-  .parser-panel {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .section {
-    background: #f8f9fa;
-    padding: 25px;
-    border-radius: 12px;
-    margin-bottom: 20px;
-  }
-
-  .section-title {
-    font-size: 1.2em;
-    font-weight: 600;
-    color: #495057;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid #dee2e6;
-  }
-
-  .cbs-textarea {
-    width: 100%;
-    box-sizing: border-box;
-    min-height: 200px;
-    padding: 15px;
-    border: 2px solid #dee2e6;
-    border-radius: 8px;
-    font-family: 'Consolas', 'Monaco', monospace;
-    font-size: 14px;
-    line-height: 1.6;
-    resize: vertical;
-    background: white;
-    color: #495057;
-    transition: border-color 0.3s ease;
-  }
-
-  .cbs-textarea:focus {
-    outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-  }
-
-  .btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    margin-top: 10px;
-    width: 100%;
-  }
-
-  .btn-success {
-    background: #28a745;
-    color: white;
-  }
-
-  .btn-success:hover {
-    background: #218838;
-    transform: translateY(-1px);
-  }
-
-  .output-box {
-    background: white;
-    padding: 15px;
-    border-radius: 8px;
-    border: 2px solid #28a745;
-    min-height: 100px;
-    font-family: 'Consolas', 'Monaco', monospace;
-    font-size: 14px;
-    line-height: 1.6;
-    color: #495057;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-  }
-
-  .error-box {
-    background: #fff5f5;
-    padding: 15px;
-    border-radius: 8px;
-    border: 2px solid #dc3545;
-    color: #dc3545;
-  }
-
-  .error-box pre {
-    margin-top: 10px;
-    background: white;
-    padding: 10px;
-    border-radius: 4px;
-    overflow-x: auto;
-  }
-
-  .example-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-
-  .example-btn {
-    padding: 10px 16px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .example-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  }
-
-  .example-btn:active {
-    transform: translateY(0);
-  }
-</style>

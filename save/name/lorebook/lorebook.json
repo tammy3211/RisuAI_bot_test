@@ -1,5 +1,16 @@
 [
   {
+    "key": "\uf000folder:world_info",
+    "comment": "🌍 세계관 폴더",
+    "insertorder": 100,
+    "mode": "folder",
+    "alwaysActive": false,
+    "selective": false,
+    "secondkey": "",
+    "content": "",
+    "useRegex": false
+  },
+  {
     "key": "세계, 세계관, world, setting",
     "comment": "세계관 설정",
     "insertorder": 100,
@@ -8,20 +19,7 @@
     "selective": true,
     "secondkey": "세계관 상세, 설정, 배경",
     "content": "{world_setting}",
-    "useRegex": false,
-    "extentions": {
-      "risu_case_sensitive": false
-    }
-  },
-  {
-    "key": "캐릭터, 주인공, character, protagonist",
-    "comment": "캐릭터 배경",
-    "insertorder": 90,
-    "mode": "normal",
-    "alwaysActive": false,
-    "selective": true,
-    "secondkey": "과거, background, history, 어린시절",
-    "content": "{character_background}",
+    "folder": "\uf000folder:world_info",
     "useRegex": false,
     "extentions": {
       "risu_case_sensitive": false
@@ -36,6 +34,48 @@
     "selective": true,
     "secondkey": "나이트 시티, Night City, 도시, city",
     "content": "{location_nightcity}",
+    "folder": "\uf000folder:world_info",
+    "useRegex": false,
+    "extentions": {
+      "risu_case_sensitive": false
+    }
+  },
+  {
+    "key": "\uf000folder:characters",
+    "comment": "👥 캐릭터 폴더",
+    "insertorder": 90,
+    "mode": "folder",
+    "alwaysActive": false,
+    "selective": false,
+    "secondkey": "",
+    "content": "",
+    "useRegex": false
+  },
+  {
+    "key": "V, 브이, 주인공",
+    "comment": "주인공 V",
+    "insertorder": 90,
+    "mode": "normal",
+    "alwaysActive": false,
+    "selective": true,
+    "secondkey": "용병, mercenary, protagonist",
+    "content": "{folder/character_v}",
+    "folder": "\uf000folder:characters",
+    "useRegex": false,
+    "extentions": {
+      "risu_case_sensitive": false
+    }
+  },
+  {
+    "key": "캐릭터, 주인공, character, protagonist",
+    "comment": "캐릭터 배경",
+    "insertorder": 90,
+    "mode": "normal",
+    "alwaysActive": false,
+    "selective": true,
+    "secondkey": "과거, background, history, 어린시절",
+    "content": "{character_background}",
+    "folder": "\uf000folder:characters",
     "useRegex": false,
     "extentions": {
       "risu_case_sensitive": false

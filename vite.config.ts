@@ -3,10 +3,14 @@ import { svelte } from '@sveltejs/vite-plugin-svelte';
 import path from "path";
 import { mockGlobalApiPlugin } from './vite-plugin-mock-globalapi';
 import { watchBotsPlugin } from './vite-plugin-watch-bots';
+import wasm from 'vite-plugin-wasm';
+import topLevelAwait from 'vite-plugin-top-level-await';
 
 export default defineConfig({
   plugins: [
     mockGlobalApiPlugin(), // MUST be first to intercept imports
+    wasm(),
+    topLevelAwait(),
     svelte(),
     watchBotsPlugin() // Watch save folder for changes
   ],
@@ -25,7 +29,8 @@ export default defineConfig({
     }
   },
   server: {
-    port: 5175,
+    host: '127.0.0.1',  // IPv4 localhost만 사용
+    port: 3000,
     open: '/index.html',
     fs: {
       allow: ['..']
