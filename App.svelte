@@ -1,12 +1,9 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import ChatTab from './lib/chat/ChatTab.svelte';
   import LorebookTab from './lib/lorebook/LorebookTab.svelte';
   import RegexTab from './lib/regex/RegexTab.svelte';
   import CBSTab from './lib/cbs/CBSTab.svelte';
   
-  let error = $state('');
-  let modules = $state<any>(null);
   let activeTab = $state('chat');
   
   const tabs = [
@@ -15,24 +12,6 @@
     { id: 'regex', icon: '🔧', label: 'Regex' },
     { id: 'cbs', icon: '📝', label: 'CBS' }
   ];
-  
-  onMount(async () => {
-    console.log('🚀 App.svelte onMount called');
-    
-    try {
-      console.log('📦 Importing modules...');
-      const { CBSModule } = await import('./ts/cbs');
-      const { ChatModule } = await import('./ts/chat');
-      const { LorebookModule } = await import('./ts/lorebook');
-      const { RegexModule } = await import('./ts/regex');
-      console.log('✅ Modules imported successfully');
-      
-      modules = { CBSModule, ChatModule, LorebookModule, RegexModule };
-    } catch (err: any) {
-      console.error('❌ Error importing modules:', err);
-      error = err.toString() + '\n\n' + err.stack;
-    }
-  });
   
   function switchTab(tabId: string) {
     activeTab = tabId;
@@ -46,14 +25,6 @@
     <h1>🤖 RisuAI Character Tester</h1>
     <p>로어북, CBS, Regex 테스트 도구</p>
   </div>
-  
-  <!-- Error Display -->
-  {#if error}
-    <div class="error-panel">
-      <h3>❌ Error:</h3>
-      <pre>{error}</pre>
-    </div>
-  {/if}
   
   <!-- Tab Navigation -->
   <div class="tabs">
@@ -71,30 +42,24 @@
   
   <!-- Tab Content -->
   <div class="tab-container">
-    <!-- Chat Tab -->
-    {#if activeTab === 'chat'}
-      <ChatTab />
-    {/if}
-    
-    <!-- Lorebook Tab -->
-    {#if activeTab === 'lorebook'}
-      <LorebookTab />
-    {/if}
-    
-    <!-- Regex Tab -->
-    {#if activeTab === 'regex'}
-      <RegexTab />
-    {/if}
-    
-    <!-- CBS Tab -->
-    {#if activeTab === 'cbs'}
-      <CBSTab />
-    {/if}
+    {#key activeTab}
+      <div class="tab-content">
+        {#if activeTab === 'chat'}
+          <ChatTab />
+        {:else if activeTab === 'lorebook'}
+          <LorebookTab />
+        {:else if activeTab === 'regex'}
+          <RegexTab />
+        {:else if activeTab === 'cbs'}
+          <CBSTab />
+        {/if}
+      </div>
+    {/key}
   </div>
   
   <!-- Footer -->
   <div class="footer">
-    <p>✅ Modules loaded: {modules ? 'Yes' : 'Loading...'} | Active Tab: {activeTab}</p>
+    <p>Active Tab: {activeTab}</p>
   </div>
 </div>
 
@@ -136,22 +101,6 @@
   .header p {
     font-size: 1.1em;
     opacity: 0.9;
-  }
-
-  .error-panel {
-    background: #ffebee;
-    padding: 20px;
-    margin: 20px;
-    border-radius: 8px;
-    color: #d32f2f;
-  }
-
-  .error-panel pre {
-    background: white;
-    padding: 10px;
-    border-radius: 4px;
-    overflow-x: auto;
-    margin-top: 10px;
   }
 
   /* Tabs */
@@ -198,6 +147,22 @@
   .tab-container {
     padding: 30px;
     min-height: 500px;
+    position: relative;
+  }
+
+  .tab-content {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   /* Footer */

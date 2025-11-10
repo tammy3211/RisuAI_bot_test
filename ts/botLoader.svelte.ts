@@ -93,6 +93,8 @@ export async function loadNestedMarkdownFiles(
       import: 'default' 
     });
     
+    console.log(`[botLoader] Looking for files in /save/${botName}/${baseFolder}/`);
+    
     for (const path in modules) {
       // Check if this path matches the pattern for current bot
       if (!path.includes(`/save/${botName}/`)) {
@@ -100,37 +102,42 @@ export async function loadNestedMarkdownFiles(
       }
       
       // Check if path includes the base folder
-      const folderPattern = new RegExp(`/save/[^/]+/[^/]+/${baseFolder}/(.+\\.md)$`);
+      const folderPattern = new RegExp(`/save/${botName}/${baseFolder}/(.+\\.md)$`);
       const match = path.match(folderPattern);
       
       if (match) {
         const relativePath = match[1]; // e.g., "world_setting.md" or "folder/character_v.md"
         
+        console.log(`[botLoader] Found file: ${path} -> ${relativePath}`);
+        
         try {
           const loader = modules[path] as () => Promise<string>;
           const content = await loader();
           
-          // Store with full relative path
+          // Remove .md extension for the key
+          const keyWithoutExt = relativePath.replace(/\.md$/, '');
+          
+          // Store with key without extension (e.g., "world_setting")
+          fileMap.set(keyWithoutExt, content);
+          
+          // Also store with full relative path for nested files
           fileMap.set(relativePath, content);
           
-          // Also store with just filename for backward compatibility
-          const fileName = relativePath.split('/').pop();
+          // Store with just filename without extension
+          const fileName = relativePath.split('/').pop()?.replace(/\.md$/, '');
           if (fileName && !fileMap.has(fileName)) {
             fileMap.set(fileName, content);
           }
           
-          // Store with path separators replaced by underscores
-          const underscorePath = relativePath.replace(/\//g, '_');
-          if (!fileMap.has(underscorePath)) {
-            fileMap.set(underscorePath, content);
-          }
+          console.log(`[botLoader] ✅ Stored as: ${keyWithoutExt}, ${relativePath}, ${fileName}`);
         } catch (error) {
-          console.warn(`Failed to load file: ${path}`, error);
+          console.warn(`[botLoader] Failed to load file: ${path}`, error);
         }
       }
     }
     
     console.log(`[botLoader] Loaded ${fileMap.size} files from ${baseFolder}/ for ${botName}`);
+    console.log(`[botLoader] Available keys:`, Array.from(fileMap.keys()));
   } catch (error) {
     console.error(`Failed to load nested markdown files for ${botName}:`, error);
   }

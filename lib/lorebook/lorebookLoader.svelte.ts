@@ -64,7 +64,9 @@ export async function loadBotLorebook(botName: string): Promise<LorebookEntry[]>
     const lorebooks: LorebookEntry[] = await response.json();
     
     // Build a map of all MD files in content/ directory
-    const contentFiles = await loadNestedMarkdownFiles(botName, 'content');
+    const contentFiles = await loadNestedMarkdownFiles(botName, 'lorebook/content');
+    
+    console.log('[lorebookLoader] Available MD files:', Array.from(contentFiles.keys()));
     
     // Load MD content for each lorebook entry
     for (const entry of lorebooks) {
@@ -72,12 +74,16 @@ export async function loadBotLorebook(botName: string): Promise<LorebookEntry[]>
       if (match) {
         const mdFileName = match[1];
         
+        console.log(`[lorebookLoader] Looking for: ${mdFileName}`);
+        
         // Find matching MD file in content map
         if (contentFiles.has(mdFileName)) {
           entry.mdContent = contentFiles.get(mdFileName);
           entry.mdFile = mdFileName;
+          console.log(`[lorebookLoader] ✅ Loaded: ${mdFileName}`);
         } else {
-          console.warn(`MD file not found in content/: ${mdFileName}`);
+          console.warn(`[lorebookLoader] ❌ MD file not found: ${mdFileName}`);
+          console.warn(`[lorebookLoader] Available keys:`, Array.from(contentFiles.keys()));
           entry.mdContent = '';
           entry.mdFile = mdFileName;
         }
