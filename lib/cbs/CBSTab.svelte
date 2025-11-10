@@ -1,52 +1,17 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import CBSParser from './CBSParser.svelte';
   import BotSettings from '../shared/BotSettings.svelte';
-  import { editorState } from '../shared/editorState.svelte';
+  //import { editorState } from '../shared/editorState.svelte';
+  import { loadSelectedBotData } from '../../ts/botLoader.svelte';
   
   // CBS states (CBS 탭 전용)
   let cbsInput = $state('');
   let cbsOutput = $state('');
   let cbsError = $state('');
   
-  onMount(async () => {
-    await loadSavedBots();
-  });
-  
-  async function loadSavedBots() {
-    try {
-      // ./save 폴더의 하위 폴더 목록을 가져옴
-      const savePath = './save';
-      const response = await fetch(savePath);
-      const html = await response.text();
-      
-      // HTML에서 폴더 링크 파싱 (간단한 방법)
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      const links = Array.from(doc.querySelectorAll('a'));
-      
-      const folders = links
-        .map(link => link.getAttribute('href'))
-        .filter(href => href && href.endsWith('/') && href !== '../')
-        .map(href => href!.replace('/', ''));
-      
-      if (folders.length > 0) {
-        editorState.savedBots = folders;
-      } else {
-        // Fallback: 알려진 폴더 사용
-        editorState.savedBots = ['name'];
-      }
-    } catch (err) {
-      console.error('Failed to load saved bots:', err);
-      // Fallback
-      editorState.savedBots = ['name'];
-    }
-  }
-  
-  async function loadBotData() {
-    console.log('[CBSTab] loadBotData called - using shared botLoader');
-    // botLoader.svelte.ts에서 이미 처리했으므로 여기서는 추가 작업 불필요
-    // 필요하다면 CBS 전용 로직만 추가
+  async function handleLoadBot() {
+    console.log('[CBSTab] Loading bot data...');
+    await loadSelectedBotData();
   }
   
   async function parseCBS() {
@@ -111,8 +76,8 @@
     </div>
 
     <!-- Right Panel -->
-    <div class="min-w-0">
-      <BotSettings onLoadBot={loadBotData} />
+    <div class="min-w-0 space-y-5">
+      <BotSettings onLoadBot={handleLoadBot} />
     </div>
   </div>
 </div>
