@@ -7,9 +7,10 @@
     allLorebooks: LorebookEntry[];
     viewMode: 'view' | 'test';
     onModeChange: (mode: 'view' | 'test') => void;
+    selectedBot: string;
   }
 
-  let { lorebook, allLorebooks, viewMode, onModeChange }: Props = $props();
+  let { lorebook, allLorebooks, viewMode, onModeChange, selectedBot }: Props = $props();
 
   // 폴더 정보를 찾는 함수
   function findFolderInfo(folderKey: string): LorebookEntry | null {
@@ -51,6 +52,7 @@
     <LorebookTester 
       lorebooks={allLorebooks}
       selectedLorebook={lorebook}
+      botName={selectedBot}
     />
   {:else if !lorebook}
     <!-- 빈 상태 -->

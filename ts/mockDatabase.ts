@@ -50,7 +50,7 @@ export function getMockCharacter() {
     type: 'character' as const,
     chaId: 'test-char',
     name: editorState.botName ?? 'TestBot',
-    firstMessage: '',
+    firstMessage: 'Hello!',  // 기본 인사말
     desc: editorState.botDescription ?? '',
     notes: '',
     chats: [createMockChat()],
@@ -79,6 +79,13 @@ export function getMockCharacter() {
     customscript: [] as any[],
     triggerscript: [] as any[],
     modules: [] as string[],
+    depth_prompt: {
+      prompt: '',
+      depth: 0,
+      role: 'system' as const,
+    },
+    replaceGlobalNote: '',
+    loreSettings: null,
   } as any;
 }
 
@@ -86,27 +93,80 @@ export function getMockCharacter() {
 export function getMockDatabase(): any {
   return {
     username: editorState.userName,
-    personaPrompt: editorState.userPersona,
+    personaPrompt: editorState.userPersona ?? '페르소나 프롬프트가 들어가는 자리입니다.',
     characters: [getMockCharacter()],
+    // Prompt settings
+    mainPrompt: '메인 프롬프트가 들어가는 자리입니다.',
+    jailbreak: '',
+    jailbreakToggle: false,
+    globalNote: '글로벌 노트 프롬프트가 들어가는 자리입니다.',
+    authorNote: '작가의 노트 프롬프트가 들어가는 자리입니다.',
+    additionalPrompt: '',
+    descriptionPrefix: 'description of {{char}}: ',
+    promptPreprocess: true,
+    chainOfThought: false,
+    // Regex & Plugins
     presetRegex: [],
     plugins: [],
+    // Bot presets
     botPresets: [],
+    botPresetsId: 0,
+    presetChain: '',
+    // Modules
     enabledModules: [],
     modules: [],
     moduleIntergration: '',
+    // Template settings
     dynamicAssets: false,
     templateDefaultVariables: '',
+    customPromptTemplateToggle: '',
+    promptTemplate: null,
+    promptSettings: {
+      sendName: false,
+      utilOverride: false,
+      postEndInnerFormat: '모든 프롬프트 요소가 조합된 후 마지막에 추가되는 시스템 메시지입니다.',
+      sendChatAsSystem: false,
+      customChainOfThought: false,
+    },
+    promptInfoInsideChat: false,
+    promptTextInfoInsideChat: false,
+    globalChatVariables: {},
+    // Memory
     hypaV3: false,
+    // Selection
     botLastSelected: 0,
     chatLastSelected: 0,
-    // AI model settings required for tokenizer
-    aiModel: 'gpt-3.5-turbo',
+    // AI model settings
+    aiModel: 'textgen_webui',  // system role을 합치지 않는 모델
     apiType: 'openai',
     maxContext: 4096,
     maxResponse: 2048,
     temperature: 0.7,
+    // Lorebook
     loreBookDepth: 5,
-    loreBookToken: 800,
+    loreBookToken: 10000,
+    // Bias
+    bias: [],
+    // Group settings
+    groupOtherBotRole: 'user',
+    // Error handling
+    inlayErrorResponse: false,
+    outputImageModal: false,
+    // Stats
+    statics: {
+      messages: 0,
+    },
+    // Additional common fields
+    formatingOrder: ['main', 'description', 'personaPrompt', 'chats', 'lastChat', 'jailbreak', 'lorebook', 'globalNote', 'authorNote'],
+    autoSuggestPrompt: '',
+    currentPluginProvider: '',
+    supaMemoryPrompt: '',
+    supaMemoryKey: '',
+    useExperimental: false,
+    translator: '',
+    imageCompression: 100,
+    removeFromMemory: false,
+    rememberToolUsage: false,
   };
 }
 

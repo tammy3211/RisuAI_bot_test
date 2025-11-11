@@ -1,13 +1,15 @@
 <script lang="ts">
   import type { LorebookEntry } from './lorebookLoader.svelte';
   import { runLorebookPrompt, type LorebookPromptResult } from './lorebookRunner';
+  import { generatePromptPreview, type PromptPreviewResult } from './promptPreview';
 
   interface Props {
     lorebooks: LorebookEntry[];
     selectedLorebook: LorebookEntry | null;
+    botName: string;
   }
 
-  let { lorebooks, selectedLorebook }: Props = $props();
+  let { lorebooks, selectedLorebook, botName }: Props = $props();
 
   const SAMPLE_TEXT = `{{user}}: 세계관에 대해 알려줘.
 {{assistant}}: 나이트 시티는 어떻습니까?
@@ -18,6 +20,9 @@
   let activatedResults = $state<LorebookPromptResult['actives']>([]);
   let matchLog = $state<LorebookPromptResult['matchLog']>([]);
   let errorMessage = $state('');
+  let showPromptPreview = $state(false);
+  let promptPreviewData = $state<PromptPreviewResult | null>(null);
+  let isGeneratingPreview = $state(false);
 
   async function runMatch() {
     isTesting = true;
@@ -35,6 +40,26 @@
       isTesting = false;
     }
   }
+
+  async function previewPrompt() {
+    isGeneratingPreview = true;
+    errorMessage = '';
+
+    try {
+      console.log('[LorebookTester] Starting preview generation...');
+      const result = await generatePromptPreview(lorebooks, conversationText, selectedLorebook, botName);
+      console.log('[LorebookTester] Preview result:', result);
+      console.log('[LorebookTester] Full prompt length:', result.fullPrompt?.length);
+      promptPreviewData = result;
+      showPromptPreview = true;
+      console.log('[LorebookTester] Preview data set, modal should show');
+    } catch (error) {
+      console.error('[LorebookTester] Preview error:', error);
+      errorMessage = error instanceof Error ? error.message : String(error);
+    } finally {
+      isGeneratingPreview = false;
+    }
+  }
 </script>
 
 <div class="flex h-full flex-col gap-5">
@@ -46,17 +71,107 @@
       bind:value={conversationText}
       rows="8"
     ></textarea>
-    <button
-      class="ml-auto inline-flex items-center justify-center rounded-md bg-blue-500 px-4 py-2 text-sm font-semibold text-white shadow transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg focus:outline-none disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-70 disabled:shadow-none"
-      onclick={runMatch}
-      disabled={isTesting}
-    >
-      {isTesting ? '⏳ 매칭 중...' : '▶ 로어북 매칭 실행'}
-    </button>
+    <div class="flex gap-2">
+      <button
+        class="flex-1 inline-flex items-center justify-center rounded-md bg-blue-500 px-4 py-2 text-sm font-semibold text-white shadow transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg focus:outline-none disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-70 disabled:shadow-none"
+        onclick={runMatch}
+        disabled={isTesting}
+      >
+        {isTesting ? '⏳ 매칭 중...' : '▶ 로어북 매칭 실행'}
+      </button>
+      <button
+        class="flex-1 inline-flex items-center justify-center rounded-md bg-green-500 px-4 py-2 text-sm font-semibold text-white shadow transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg focus:outline-none disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-70 disabled:shadow-none"
+        onclick={previewPrompt}
+        disabled={isGeneratingPreview}
+      >
+        {isGeneratingPreview ? '⏳ 생성 중...' : '👁️ 프롬프트 미리보기'}
+      </button>
+    </div>
     {#if errorMessage}
       <div class="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">⚠️ {errorMessage}</div>
     {/if}
   </div>
+
+  {#if showPromptPreview}
+    <!-- 프롬프트 미리보기 모달 -->
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-5" onclick={(e) => {
+      if (e.target === e.currentTarget) showPromptPreview = false;
+    }}>
+      <div class="flex max-h-[80vh] w-full max-w-4xl flex-col gap-4 rounded-xl border border-gray-300 bg-white p-6 shadow-2xl">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xl font-bold text-gray-800">📝 프롬프트 미리보기</h3>
+          <button
+            class="rounded-md px-3 py-1 text-2xl text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
+            onclick={() => showPromptPreview = false}
+          >
+            ×
+          </button>
+        </div>
+        <div class="flex-1 overflow-y-auto rounded-lg border border-gray-300 bg-gray-50 p-4">
+          {#if promptPreviewData && promptPreviewData.fullPrompt}
+            <!-- Role별 메시지 박스 표시 -->
+            <div class="flex flex-col gap-3">
+              {#each promptPreviewData.messages as msg}
+                {@const roleColors = {
+                  system: { bg: 'bg-purple-50', border: 'border-purple-300', text: 'text-purple-700', badge: 'bg-purple-500' },
+                  user: { bg: 'bg-blue-50', border: 'border-blue-300', text: 'text-blue-700', badge: 'bg-blue-500' },
+                  assistant: { bg: 'bg-green-50', border: 'border-green-300', text: 'text-green-700', badge: 'bg-green-500' },
+                  function: { bg: 'bg-orange-50', border: 'border-orange-300', text: 'text-orange-700', badge: 'bg-orange-500' },
+                }}
+                {@const colors = roleColors[msg.role] || { bg: 'bg-gray-50', border: 'border-gray-300', text: 'text-gray-700', badge: 'bg-gray-500' }}
+                
+                <div class="rounded-lg border-2 {colors.border} {colors.bg} p-4">
+                  <div class="mb-2 flex items-center justify-between">
+                    <span class="inline-flex items-center rounded-full {colors.badge} px-3 py-1 text-xs font-bold uppercase text-white">
+                      {msg.role}
+                    </span>
+                    {#if msg.source}
+                      <span class="rounded border px-2 py-0.5 text-xs {colors.text} {colors.border}">{msg.source}</span>
+                    {/if}
+                  </div>
+                  <pre class="whitespace-pre-wrap font-mono text-sm leading-relaxed {colors.text}">{msg.content}</pre>
+                </div>
+              {/each}
+            </div>
+          {:else if promptPreviewData}
+            <div class="text-gray-700">
+              <p class="mb-2">데이터가 있으나 fullPrompt가 비어있습니다.</p>
+              <p class="text-xs">Messages: {promptPreviewData.messages?.length || 0}</p>
+              <pre class="mt-2 text-xs">{JSON.stringify(promptPreviewData, null, 2)}</pre>
+            </div>
+          {:else}
+            <p class="text-gray-500">프롬프트를 생성하는 중...</p>
+          {/if}
+        </div>
+        <div class="flex justify-end gap-2">
+          <button
+            class="rounded-md bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-300"
+            onclick={() => {
+              if (promptPreviewData) {
+                // 메시지들을 텍스트로 변환하여 복사
+                const textToCopy = promptPreviewData.messages.map(msg => 
+                  `[${msg.role.toUpperCase()}]\n${msg.content}`
+                ).join('\n\n---\n\n');
+                navigator.clipboard.writeText(textToCopy);
+                alert('프롬프트가 클립보드에 복사되었습니다!');
+              }
+            }}
+            disabled={!promptPreviewData}
+          >
+            📋 복사
+          </button>
+          <button
+            class="rounded-md bg-blue-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-600"
+            onclick={() => showPromptPreview = false}
+          >
+            닫기
+          </button>
+        </div>
+      </div>
+    </div>
+  {/if}
 
   <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
     <div class="flex flex-col gap-3 rounded-xl border border-gray-300 bg-white p-5 shadow-sm">

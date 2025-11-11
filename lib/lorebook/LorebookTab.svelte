@@ -42,6 +42,7 @@
         allLorebooks={lorebooks}
         viewMode={viewMode}
         onModeChange={handleModeChange}
+        selectedBot={selectedBot}
       />
     </div>
 
