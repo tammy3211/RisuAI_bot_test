@@ -8,9 +8,15 @@
     viewMode: 'view' | 'test';
     onModeChange: (mode: 'view' | 'test') => void;
     selectedBot: string;
+    lorebookSettings: {
+      recursiveScanning: boolean;
+      fullWordMatching: boolean;
+      scanDepth: number;
+      tokenBudget: number;
+    };
   }
 
-  let { lorebook, allLorebooks, viewMode, onModeChange, selectedBot }: Props = $props();
+  let { lorebook, allLorebooks, viewMode, onModeChange, selectedBot, lorebookSettings }: Props = $props();
 
   // 폴더 정보를 찾는 함수
   function findFolderInfo(folderKey: string): LorebookEntry | null {
@@ -53,6 +59,7 @@
       lorebooks={allLorebooks}
       selectedLorebook={lorebook}
       botName={selectedBot}
+      lorebookSettings={lorebookSettings}
     />
   {:else if !lorebook}
     <!-- 빈 상태 -->

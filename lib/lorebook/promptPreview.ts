@@ -20,8 +20,13 @@ export interface PromptPreviewResult {
 export async function generatePromptPreview(
   lorebooks: LorebookEntry[],
   conversation: string,
-  _selectedLorebook: LorebookEntry | null,
-  botName: string
+  botName: string,
+  settings: {
+    recursiveScanning: boolean;
+    fullWordMatching: boolean;
+    scanDepth: number;
+    tokenBudget: number;
+  }
 ): Promise<PromptPreviewResult> {
   try {
     await setupDatabaseMocks();
@@ -98,11 +103,11 @@ export async function generatePromptPreview(
       },
     ];
     mockChar.chatPage = 0;
-    mockChar.loreSettings = mockChar.loreSettings ?? {
-      scanDepth: db.loreBookDepth ?? 5,
-      tokenBudget: db.loreBookToken ?? 10000,
-      fullWordMatching: false,
-      recursiveScanning: true,
+    mockChar.loreSettings = {
+      scanDepth: settings.scanDepth,
+      tokenBudget: settings.tokenBudget,
+      fullWordMatching: settings.fullWordMatching,
+      recursiveScanning: settings.recursiveScanning,
     };
 
     // 기본 프롬프트 설정
@@ -134,20 +139,22 @@ export async function generatePromptPreview(
     });
 
     // sendChat을 preview 모드로 호출
-    const { sendChat, previewFormated, previewBody } = await import('src/ts/process/index.svelte');
+    let { sendChat } = await import('src/ts/process/index.svelte');
     
     console.log('[promptPreview] Calling sendChat with preview mode...');
+    
     await sendChat(-1, {
       preview: true,
       previewPrompt: false
     });
 
-    console.log('[promptPreview] Preview generated:', previewFormated.length, 'messages');
+    // sendChat 실행 후 다시 import해서 최신 값 가져오기
+    const reImported = await import('src/ts/process/index.svelte');
+    const formatedMessages = [...reImported.previewFormated];
+    const body = reImported.previewBody;
 
-    // 선택된 로어북 필터링
-    let formatedMessages = [...previewFormated];
-    
-    console.log('[promptPreview] Formated messages:', formatedMessages);
+    console.log('[promptPreview] Preview generated:', formatedMessages.length, 'messages');
+    console.log('[promptPreview] First message:', formatedMessages[0]);
     
     // 메시지를 문자열로 조합
     const styledRole: Record<string, string> = {
@@ -191,7 +198,7 @@ export async function generatePromptPreview(
         content: msg.content,
         source: (msg as any).memo
       })),
-      requestBody: previewBody || undefined
+      requestBody: body || undefined
     };
 
     console.log('[promptPreview] Returning result:', {
@@ -212,8 +219,7 @@ export async function generatePromptPreview(
  */
 export async function generateRequestBodyPreview(
   lorebooks: LorebookEntry[],
-  conversation: string,
-  _selectedLorebook: LorebookEntry | null
+  conversation: string
 ): Promise<string> {
   try {
     await setupDatabaseMocks();

@@ -7,9 +7,15 @@
     lorebooks: LorebookEntry[];
     selectedLorebook: LorebookEntry | null;
     botName: string;
+    lorebookSettings: {
+      recursiveScanning: boolean;
+      fullWordMatching: boolean;
+      scanDepth: number;
+      tokenBudget: number;
+    };
   }
 
-  let { lorebooks, selectedLorebook, botName }: Props = $props();
+  let { lorebooks, botName, lorebookSettings }: Props = $props();
 
   const SAMPLE_TEXT = `{{user}}: 세계관에 대해 알려줘.
 {{assistant}}: 나이트 시티는 어떻습니까?
@@ -31,7 +37,7 @@
     matchLog = [];
 
     try {
-      const result = await runLorebookPrompt(lorebooks, conversationText, selectedLorebook);
+      const result = await runLorebookPrompt(lorebooks, conversationText, lorebookSettings);
       activatedResults = result.actives;
       matchLog = result.matchLog;
     } catch (error) {
@@ -44,15 +50,23 @@
   async function previewPrompt() {
     isGeneratingPreview = true;
     errorMessage = '';
+    promptPreviewData = null; // 이전 데이터 초기화
 
     try {
       console.log('[LorebookTester] Starting preview generation...');
-      const result = await generatePromptPreview(lorebooks, conversationText, selectedLorebook, botName);
+      const result = await generatePromptPreview(lorebooks, conversationText, botName, lorebookSettings);
       console.log('[LorebookTester] Preview result:', result);
+      console.log('[LorebookTester] Messages count:', result.messages?.length);
       console.log('[LorebookTester] Full prompt length:', result.fullPrompt?.length);
+      
+      // 데이터를 먼저 설정하고
       promptPreviewData = result;
+      console.log('[LorebookTester] Data assigned to promptPreviewData');
+      
+      // 다음 틱에서 모달 표시
+      await new Promise(resolve => setTimeout(resolve, 0));
       showPromptPreview = true;
-      console.log('[LorebookTester] Preview data set, modal should show');
+      console.log('[LorebookTester] Modal shown');
     } catch (error) {
       console.error('[LorebookTester] Preview error:', error);
       errorMessage = error instanceof Error ? error.message : String(error);
@@ -101,7 +115,10 @@
     }}>
       <div class="flex max-h-[80vh] w-full max-w-4xl flex-col gap-4 rounded-xl border border-gray-300 bg-white p-6 shadow-2xl">
         <div class="flex items-center justify-between">
-          <h3 class="text-xl font-bold text-gray-800">📝 프롬프트 미리보기</h3>
+          <div class="flex flex-col gap-1">
+            <h3 class="text-xl font-bold text-gray-800">📝 프롬프트 미리보기</h3>
+            <p class="text-xs text-gray-500">리스의 기본 템플릿을 기준으로 생성된 프롬프트입니다. 실제 동작과 다를 수 있습니다.</p>
+          </div>
           <button
             class="rounded-md px-3 py-1 text-2xl text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
             onclick={() => showPromptPreview = false}

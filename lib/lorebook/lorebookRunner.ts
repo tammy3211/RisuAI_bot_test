@@ -18,7 +18,12 @@ export interface LorebookPromptResult {
 export async function runLorebookPrompt(
   lorebooks: LorebookEntry[],
   conversation: string,
-  selectedLorebook: LorebookEntry | null
+  settings: {
+    recursiveScanning: boolean;
+    fullWordMatching: boolean;
+    scanDepth: number;
+    tokenBudget: number;
+  }
 ): Promise<LorebookPromptResult> {
   try {
     await setupDatabaseMocks();
@@ -36,11 +41,11 @@ export async function runLorebookPrompt(
       },
     ];
     mockChar.chatPage = 0;
-    mockChar.loreSettings = mockChar.loreSettings ?? {
-      scanDepth: db.loreBookDepth ?? 5,
-      tokenBudget: db.loreBookToken ?? 800,
-      fullWordMatching: false,
-      recursiveScanning: true,
+    mockChar.loreSettings = {
+      scanDepth: settings.scanDepth,
+      tokenBudget: settings.tokenBudget,
+      fullWordMatching: settings.fullWordMatching,
+      recursiveScanning: settings.recursiveScanning,
     };
     mockChar.globalLore = cloneLorebooks(lorebooks);
 
@@ -61,15 +66,7 @@ export async function runLorebookPrompt(
     const result = await loadLoreBookV3Prompt();
     console.log('[lorebookRunner] Result:', result);
 
-    if (selectedLorebook) {
-      result.actives = result.actives.filter((active: any) =>
-        matchesLorebook(active?.source, selectedLorebook)
-      );
-      result.matchLog = result.matchLog.filter((log: any) =>
-        matchesLorebook(log?.source, selectedLorebook)
-      );
-    }
-
+    // 항상 전체 로어북 매칭 결과 반환 (필터링하지 않음)
     return result as LorebookPromptResult;
   } catch (error) {
     console.error('[lorebookRunner] Error:', error);
@@ -153,11 +150,4 @@ function cloneLorebooks(lorebooks: LorebookEntry[]) {
     }
     return cloned;
   }
-}
-
-function matchesLorebook(source: string | undefined, lorebook: LorebookEntry) {
-  if (!source || typeof source !== 'string') return false;
-  const name = lorebook.comment || lorebook.key;
-  if (!name) return false;
-  return source === name || source.includes(name);
 }
