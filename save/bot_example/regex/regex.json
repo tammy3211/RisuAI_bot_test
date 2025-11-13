@@ -52,5 +52,14 @@
     "type": "editoutput",
     "flag": "g",
     "ableFlag": true
+  },
+  {
+    "comment": "프롬프트 수정 테스트",
+    "in": "\\{test\\}",
+    "out": "",
+    "outFile": "prompt_modification.md",
+    "type": "editprocess",
+    "flag": "g",
+    "ableFlag": true
   }
 ]

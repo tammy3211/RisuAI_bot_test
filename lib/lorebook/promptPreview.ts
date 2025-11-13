@@ -26,7 +26,8 @@ export async function generatePromptPreview(
     fullWordMatching: boolean;
     scanDepth: number;
     tokenBudget: number;
-  }
+  },
+  regexScripts: Array<{ comment: string; in: string; out: string; type: string; flag?: string; ableFlag?: boolean }> = []
 ): Promise<PromptPreviewResult> {
   try {
     await setupDatabaseMocks();
@@ -67,7 +68,7 @@ export async function generatePromptPreview(
 
     // firstMessage가 없으면 기본값 설정
     if (!firstMessage) {
-      firstMessage = 'Hello!';
+      firstMessage = 'first_mes.md이 없습니다. 파일을 작성해 주세요.';
     }
 
     // mockChar에 설정
@@ -77,6 +78,9 @@ export async function generatePromptPreview(
 
     // 로어북 설정
     mockChar.globalLore = cloneLorebooks(lorebooks);
+    
+    // 정규식 설정
+    mockChar.customscript = regexScripts;
     
     // 대화 메시지 생성
     const conversationMessages = buildMessages(conversation, mockChar.name || 'Assistant');

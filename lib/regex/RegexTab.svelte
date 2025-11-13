@@ -114,7 +114,8 @@
       const data: Array<CustomScript & { outFile?: string }> = await response.json();
 
       // Build a map of all MD files in out/ directory
-      const outFiles = await loadNestedMarkdownFiles(botName, 'out');
+      const outFiles = await loadNestedMarkdownFiles(botName, 'regex/out');
+      console.log('[RegexTab] Loaded outFiles:', Array.from(outFiles.keys()));
 
       const resolvedScripts = await Promise.all(data.map(async (script, idx) => {
         const flag = typeof script.flag === 'string' && script.flag.trim().length > 0 ? script.flag.trim() : 'g';
@@ -130,8 +131,10 @@
         }
 
         // Find matching MD file in out map
+        console.log(`[RegexTab] Looking for outFile: "${outFile}", has: ${outFiles.has(outFile)}`);
         if (outFiles.has(outFile)) {
           out = outFiles.get(outFile) ?? '';
+          console.log(`[RegexTab] Loaded content for ${outFile}:`, out.substring(0, 50));
         } else {
           console.warn('Regex output file not found in out/:', outFile);
         }

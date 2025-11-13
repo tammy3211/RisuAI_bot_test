@@ -2,6 +2,13 @@
   import type { LorebookEntry } from './lorebookLoader.svelte';
   import { runLorebookPrompt, type LorebookPromptResult } from './lorebookRunner';
   import { generatePromptPreview, type PromptPreviewResult } from './promptPreview';
+  import ChatInterface from './ChatInterface.svelte';
+
+  interface Message {
+    id: string;
+    role: 'user' | 'assistant';
+    content: string;
+  }
 
   interface Props {
     lorebooks: LorebookEntry[];
@@ -17,11 +24,8 @@
 
   let { lorebooks, botName, lorebookSettings }: Props = $props();
 
-  const SAMPLE_TEXT = `{{user}}: 세계관에 대해 알려줘.
-{{assistant}}: 나이트 시티는 어떻습니까?
-{{user}}: 주인공의 과거가 궁금해.`;
-
-  let conversationText = $state(SAMPLE_TEXT);
+  let messages = $state<Message[]>([]);
+  let conversationText = $state('');
   let isTesting = $state(false);
   let activatedResults = $state<LorebookPromptResult['actives']>([]);
   let matchLog = $state<LorebookPromptResult['matchLog']>([]);
@@ -29,6 +33,54 @@
   let showPromptPreview = $state(false);
   let promptPreviewData = $state<PromptPreviewResult | null>(null);
   let isGeneratingPreview = $state(false);
+  let firstMessage = $state('Hello!');
+  let regexScripts = $state<Array<{ comment: string; in: string; out: string; type: string; flag?: string; ableFlag?: boolean }>>([]);
+
+  // first_mes.md와 정규식 스크립트 로드
+  $effect(() => {
+    if (botName) {
+      loadFirstMessage();
+      loadRegexScripts();
+    }
+  });
+
+  async function loadFirstMessage() {
+    try {
+      const firstMesPath = `/save/${botName}/first_mes.md`;
+      const response = await fetch(firstMesPath + '?t=' + Date.now());
+      if (response.ok) {
+        firstMessage = await response.text();
+      }
+    } catch (error) {
+      console.warn('[LorebookTester] Failed to load first_mes.md:', error);
+    }
+  }
+
+  async function loadRegexScripts() {
+    try {
+      const regexPath = `/save/${botName}/regex.json`;
+      const response = await fetch(regexPath + '?t=' + Date.now());
+      if (response.ok) {
+        const data = await response.json();
+        regexScripts = Array.isArray(data) ? data : [];
+        console.log('[LorebookTester] Loaded regex scripts:', regexScripts.length);
+      } else {
+        regexScripts = [];
+      }
+    } catch (error) {
+      console.warn('[LorebookTester] Failed to load regex.json:', error);
+      regexScripts = [];
+    }
+  }
+
+  function handleMessagesChange(newMessages: Message[]) {
+    messages = newMessages;
+    // 메시지를 텍스트 형식으로 변환 (첫 메시지 제외, first_mes.md로 처리됨)
+    conversationText = messages
+      .filter(m => !m.isFirstMessage)
+      .map(m => `{{${m.role}}}: ${m.content}`)
+      .join('\n');
+  }
 
   async function runMatch() {
     isTesting = true;
@@ -54,7 +106,7 @@
 
     try {
       console.log('[LorebookTester] Starting preview generation...');
-      const result = await generatePromptPreview(lorebooks, conversationText, botName, lorebookSettings);
+      const result = await generatePromptPreview(lorebooks, conversationText, botName, lorebookSettings, regexScripts);
       console.log('[LorebookTester] Preview result:', result);
       console.log('[LorebookTester] Messages count:', result.messages?.length);
       console.log('[LorebookTester] Full prompt length:', result.fullPrompt?.length);
@@ -78,13 +130,17 @@
 
 <div class="flex h-full flex-col gap-5">
   <div class="flex flex-col gap-3 rounded-xl border border-gray-300 bg-white p-5 shadow-sm">
-    <label for="conversation" class="text-sm font-semibold text-gray-700">🧪 테스트 대화 텍스트</label>
-    <textarea
-      id="conversation"
-      class="min-h-[180px] w-full resize-y rounded-lg border-2 border-gray-300 bg-white p-3 font-mono text-sm leading-relaxed text-gray-800 transition-all duration-150 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-200/70"
-      bind:value={conversationText}
-      rows="8"
-    ></textarea>
+    <div class="flex items-center justify-between">
+      <span class="text-sm font-semibold text-gray-700">💬 테스트 대화</span>
+      <span class="text-xs text-gray-500">{messages.length}개 메시지</span>
+    </div>
+    <div class="min-h-[300px]">
+      <ChatInterface 
+        onMessagesChange={handleMessagesChange}
+        firstMessage={firstMessage}
+        regexScripts={regexScripts}
+      />
+    </div>
     <div class="flex gap-2">
       <button
         class="flex-1 inline-flex items-center justify-center rounded-md bg-blue-500 px-4 py-2 text-sm font-semibold text-white shadow transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg focus:outline-none disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-70 disabled:shadow-none"

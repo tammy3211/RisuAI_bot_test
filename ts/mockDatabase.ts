@@ -50,7 +50,7 @@ export function getMockCharacter() {
     type: 'character' as const,
     chaId: 'test-char',
     name: editorState.botName ?? 'TestBot',
-    firstMessage: 'Hello!',  // 기본 인사말
+    firstMessage: '첫 메시지입니다.',  // 기본 인사말
     desc: editorState.botDescription ?? '',
     notes: '',
     chats: [createMockChat()],
@@ -74,7 +74,7 @@ export function getMockCharacter() {
     firstMsgIndex: 0,
     bias: [] as [string, number][],
     emotionImages: [] as [string, string][],
-    globalLore: [] as any[],
+    globalLore: ['로어북이 들어가는 자리입니다. 최적화를 위해 이 탭에서는 출력되지 않습니다.'] as any[],
     sdData: [] as [string, string][],
     customscript: [] as any[],
     triggerscript: [] as any[],
