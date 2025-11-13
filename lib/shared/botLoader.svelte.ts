@@ -1,5 +1,5 @@
 // 저장된 봇들을 자동으로 로드하고 HMR 지원
-import { editorState, saveEditorState } from '../lib/shared/editorState.svelte';
+import { editorState, saveEditorState } from './editorState.svelte';
 
 // import.meta.glob으로 모든 description.md 파일 가져오기
 // 절대 경로 사용 (Vite root 기준)

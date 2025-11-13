@@ -1,9 +1,9 @@
 <script lang="ts">
   import type { LorebookEntry } from './lorebookLoader.svelte';
-  import { runLorebookPrompt, type LorebookPromptResult } from './lorebookRunner';
-  import { generatePromptPreview, type PromptPreviewResult } from './promptPreview';
+  import { runLorebookPrompt, type LorebookPromptResult } from '../../ts/lorebookRunner';
+  import { generatePromptPreview, type PromptPreviewResult } from '../../ts/promptPreview';
   import ChatInterface from './ChatInterface.svelte';
-  import { loadBotRegexScripts } from '../../ts/botLoader.svelte';
+  import { loadBotRegexScripts } from '../shared/botLoader.svelte';
 
   interface Message {
     id: string;

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { editorState, saveEditorState } from './editorState.svelte';
-  import { loadAllBots, loadSelectedBotData } from '../../ts/botLoader.svelte';
+  import { loadAllBots, loadSelectedBotData } from './botLoader.svelte';
   
   interface Props {
     onLoadBot?: () => void;

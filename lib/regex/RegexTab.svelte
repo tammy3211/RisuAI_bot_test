@@ -5,7 +5,7 @@
   import { processRegexScripts } from '../../ts/regexProcessor';
   import RegexItem from './RegexItem.svelte';
   import RegexTester from './RegexTester.svelte';
-  import { loadAllBots, loadBotRegexScripts } from '../../ts/botLoader.svelte';
+  import { loadAllBots, loadBotRegexScripts } from '../shared/botLoader.svelte';
 
   interface CustomScript {
     comment: string;

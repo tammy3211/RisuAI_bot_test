@@ -2,7 +2,7 @@
   import { editorState, saveEditorState } from '../shared/editorState.svelte';
   import { processRegexScripts } from '../../ts/regexProcessor';
   import BotSourceSelector from '../shared/BotSourceSelector.svelte';
-  import { loadSelectedBotData } from '../../ts/botLoader.svelte';
+  import { loadSelectedBotData } from '../shared/botLoader.svelte';
   
   // Message type matching RisuAI structure
   interface Message {

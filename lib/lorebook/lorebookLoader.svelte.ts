@@ -1,7 +1,7 @@
 // Lorebook loader utilities
 // Loads bot list and lorebook data independently
 
-import { loadNestedMarkdownFiles } from '../../ts/botLoader.svelte';
+import { loadNestedMarkdownFiles } from '../shared/botLoader.svelte';
 
 export interface LorebookEntry {
   key: string;

@@ -2,7 +2,7 @@
   import CBSParser from './CBSParser.svelte';
   import BotSettings from '../shared/BotSettings.svelte';
   //import { editorState } from '../shared/editorState.svelte';
-  import { loadSelectedBotData } from '../../ts/botLoader.svelte';
+  import { loadSelectedBotData } from '../shared/botLoader.svelte';
   
   // CBS states (CBS 탭 전용)
   let cbsInput = $state('');
