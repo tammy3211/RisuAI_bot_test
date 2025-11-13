@@ -5,7 +5,7 @@
   import { processRegexScripts } from '../../ts/regexProcessor';
   import RegexItem from './RegexItem.svelte';
   import RegexTester from './RegexTester.svelte';
-  import { loadAllBots, loadNestedMarkdownFiles } from '../../ts/botLoader.svelte';
+  import { loadAllBots, loadBotRegexScripts } from '../../ts/botLoader.svelte';
 
   interface CustomScript {
     comment: string;
@@ -105,53 +105,13 @@
       }
 
       const botName = editorState.selectedBot;
-      const response = await fetch(`/save/${botName}/regex/regex.json`);
-      if (!response.ok) {
-        regexList = [];
-        return;
-      }
-
-      const data: Array<CustomScript & { outFile?: string }> = await response.json();
-
-      // Build a map of all MD files in out/ directory
-      const outFiles = await loadNestedMarkdownFiles(botName, 'regex/out');
-      console.log('[RegexTab] Loaded outFiles:', Array.from(outFiles.keys()));
-
-      const resolvedScripts = await Promise.all(data.map(async (script, idx) => {
-        const flag = typeof script.flag === 'string' && script.flag.trim().length > 0 ? script.flag.trim() : 'g';
-        const ableFlag = script.ableFlag ?? true;
-        let outFile = script.outFile;
-        let out = script.out ?? '';
-
-        if (!outFile) {
-          const fallbackName = script.comment?.trim().length
-            ? script.comment.trim().replace(/[^a-zA-Z0-9_-]+/g, '_').toLowerCase()
-            : `regex_${idx}`;
-          outFile = `${fallbackName}.md`;
-        }
-
-        // Find matching MD file in out map
-        console.log(`[RegexTab] Looking for outFile: "${outFile}", has: ${outFiles.has(outFile)}`);
-        if (outFiles.has(outFile)) {
-          out = outFiles.get(outFile) ?? '';
-          console.log(`[RegexTab] Loaded content for ${outFile}:`, out.substring(0, 50));
-        } else {
-          console.warn('Regex output file not found in out/:', outFile);
-        }
-
-        return {
-          comment: script.comment ?? '',
-          in: script.in ?? '',
-          out,
-          outFile,
-          type: script.type ?? 'editinput',
-          flag,
-          ableFlag,
-          id: `${idx}-${Date.now()}`
-        };
-    }));
-
-    regexList = resolvedScripts;
+      const resolvedScripts = await loadBotRegexScripts(botName);
+      
+      // Add IDs to each script
+      regexList = resolvedScripts.map((script, idx) => ({
+        ...script,
+        id: `${idx}-${Date.now()}`
+      }));
     } catch (err) {
       console.error('Failed to load regex data:', err);
       regexList = [];

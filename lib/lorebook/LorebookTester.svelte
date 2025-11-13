@@ -3,11 +3,13 @@
   import { runLorebookPrompt, type LorebookPromptResult } from './lorebookRunner';
   import { generatePromptPreview, type PromptPreviewResult } from './promptPreview';
   import ChatInterface from './ChatInterface.svelte';
+  import { loadBotRegexScripts } from '../../ts/botLoader.svelte';
 
   interface Message {
     id: string;
     role: 'user' | 'assistant';
     content: string;
+    isFirstMessage?: boolean;
   }
 
   interface Props {
@@ -57,20 +59,7 @@
   }
 
   async function loadRegexScripts() {
-    try {
-      const regexPath = `/save/${botName}/regex.json`;
-      const response = await fetch(regexPath + '?t=' + Date.now());
-      if (response.ok) {
-        const data = await response.json();
-        regexScripts = Array.isArray(data) ? data : [];
-        console.log('[LorebookTester] Loaded regex scripts:', regexScripts.length);
-      } else {
-        regexScripts = [];
-      }
-    } catch (error) {
-      console.warn('[LorebookTester] Failed to load regex.json:', error);
-      regexScripts = [];
-    }
+    regexScripts = await loadBotRegexScripts(botName);
   }
 
   function handleMessagesChange(newMessages: Message[]) {

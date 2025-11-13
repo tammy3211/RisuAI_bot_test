@@ -144,3 +144,69 @@ export async function loadNestedMarkdownFiles(
   
   return fileMap;
 }
+
+/**
+ * Load regex scripts for a bot with external file resolution
+ * @param botName - Name of the bot to load regex scripts for
+ * @returns Array of resolved regex scripts with 'out' content loaded from files
+ */
+export async function loadBotRegexScripts(
+  botName: string
+): Promise<Array<{ comment: string; in: string; out: string; outFile?: string; type: string; flag?: string; ableFlag?: boolean }>> {
+  try {
+    const regexPath = `/save/${botName}/regex/regex.json`;
+    const response = await fetch(regexPath + '?t=' + Date.now());
+    
+    if (!response.ok) {
+      return [];
+    }
+
+    const data = await response.json();
+    if (!Array.isArray(data)) {
+      return [];
+    }
+
+    // Load all MD files from regex/out/ directory
+    const outFiles = await loadNestedMarkdownFiles(botName, 'regex/out');
+    console.log(`[botLoader] Loaded regex outFiles for ${botName}:`, Array.from(outFiles.keys()));
+
+    // Resolve out content from files
+    const resolvedScripts = await Promise.all(data.map(async (script: any, idx: number) => {
+      let outFile = script.outFile;
+      let out = script.out ?? '';
+
+      // If no outFile specified, try to generate a fallback name
+      if (!outFile) {
+        const fallbackName = script.comment?.trim().length
+          ? script.comment.trim().replace(/[^a-zA-Z0-9_-]+/g, '_').toLowerCase()
+          : `regex_${idx}`;
+        outFile = `${fallbackName}.md`;
+      }
+
+      // Find matching MD file in out map
+      console.log(`[botLoader] Looking for regex outFile: "${outFile}", has: ${outFiles.has(outFile)}`);
+      if (outFiles.has(outFile)) {
+        out = outFiles.get(outFile) ?? '';
+        console.log(`[botLoader] Loaded content for ${outFile}:`, out.substring(0, 50));
+      } else if (!out) {
+        console.warn(`[botLoader] Regex output file not found in out/: ${outFile}`);
+      }
+
+      return {
+        comment: script.comment ?? '',
+        in: script.in ?? '',
+        out,
+        outFile,
+        type: script.type ?? 'editinput',
+        flag: script.flag ?? 'g',
+        ableFlag: script.ableFlag ?? true
+      };
+    }));
+
+    console.log(`[botLoader] Loaded ${resolvedScripts.length} regex scripts for ${botName}`);
+    return resolvedScripts;
+  } catch (error) {
+    console.warn(`[botLoader] Failed to load regex scripts for ${botName}:`, error);
+    return [];
+  }
+}
