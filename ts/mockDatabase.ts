@@ -1,6 +1,41 @@
 // Mock database for RisuAI functions using editorState
 import { editorState } from '../lib/shared/editorState.svelte';
 
+// Lorebook data structures
+export interface LorebookEntry {
+  key: string;
+  secondkey: string;
+  insertorder: number;
+  comment: string;
+  content: string;
+  mode: 'multiple' | 'constant' | 'normal' | 'child' | 'folder';
+  alwaysActive: boolean;
+  selective: boolean;
+  extentions?: {
+    risu_case_sensitive: boolean;
+  };
+  activationPercent?: number;
+  useRegex?: boolean;
+  bookVersion?: number;
+  id?: string;
+  folder?: string;
+  mdContent?: string;
+  mdFile?: string;
+}
+
+export interface BotData {
+  name: string;
+  description: string;
+  firstMessage: string;
+  regexScripts: any[];
+  lorebooks: LorebookEntry[];
+  emotionImages: [string, string][];
+  additionalAssets: [string, string, string][];
+  ccAssets: Array<{ type: string; uri: string; name: string; ext: string }>;
+  image: string;
+  triggerscript: any[];
+}
+
 let storeSetupPromise: Promise<void> | null = null;
 
 function buildScriptState() {
@@ -216,13 +251,25 @@ export async function setupDatabaseMocks() {
   }
 }
 
-export async function prepareMockCharacter(scripts: Array<{ comment: string; in: string; out: string; type: string; flag?: string; ableFlag?: boolean }>) {
+export async function prepareMockCharacter(botData: BotData) {
   await setupDatabaseMocks();
   try {
     await applyEditorStateRuntime();
     const db = getMockDatabase();
     const mockChar = db.characters?.[0] ?? getMockCharacter();
-    mockChar.customscript = scripts as any;
+    
+    // Apply all bot data to character
+    mockChar.name = botData.name || 'TestBot';
+    mockChar.desc = botData.description || '';
+    mockChar.firstMessage = botData.firstMessage || '첫 메시지입니다.';
+    mockChar.globalLore = botData.lorebooks as any;
+    mockChar.customscript = botData.regexScripts as any;
+    mockChar.emotionImages = botData.emotionImages as any;
+    mockChar.additionalAssets = botData.additionalAssets as any;
+    mockChar.ccAssets = botData.ccAssets as any;
+    mockChar.image = botData.image || '';
+    mockChar.triggerscript = botData.triggerscript as any;
+    
     if (!Array.isArray(mockChar.chats) || mockChar.chats.length === 0) {
       mockChar.chats = [createMockChat()];
     }
@@ -246,7 +293,16 @@ export async function prepareMockCharacter(scripts: Array<{ comment: string; in:
   } catch (e) {
     console.warn('[mockDatabase] Failed to prepare mock character:', e);
     const fallbackChar = getMockCharacter() as any;
-    fallbackChar.customscript = scripts as any;
+    fallbackChar.name = botData.name || 'TestBot';
+    fallbackChar.desc = botData.description || '';
+    fallbackChar.firstMessage = botData.firstMessage || '첫 메시지입니다.';
+    fallbackChar.globalLore = botData.lorebooks as any;
+    fallbackChar.customscript = botData.regexScripts as any;
+    fallbackChar.emotionImages = botData.emotionImages as any;
+    fallbackChar.additionalAssets = botData.additionalAssets as any;
+    fallbackChar.ccAssets = botData.ccAssets as any;
+    fallbackChar.image = botData.image || '';
+    fallbackChar.triggerscript = botData.triggerscript as any;
     return fallbackChar;
   }
 }

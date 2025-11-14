@@ -1,0 +1,14 @@
+[
+  {
+    "type": "icon",
+    "uri": "icon/Airisu.webp",
+    "name": "main",
+    "ext": "webp"
+  },
+  {
+    "type": "x-risu-asset",
+    "uri": "other/Airisu.webp",
+    "name": "Airisu",
+    "ext": "webp"
+  }
+]

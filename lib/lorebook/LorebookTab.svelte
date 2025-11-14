@@ -3,7 +3,8 @@
   import LorebookList from './LorebookList.svelte';
   import LorebookSettings from './LorebookSettings.svelte';
   import LorebookDetail from './LorebookDetail.svelte';
-  import { loadBotLorebook, type LorebookEntry } from './lorebookLoader.svelte';
+  import type { LorebookEntry } from '../../ts/mockDatabase';
+  import { loadBotLorebook } from '../shared/botLoader.svelte';
 
   let selectedBot = $state('');
   let lorebooks = $state<LorebookEntry[]>([]);

@@ -78,6 +78,8 @@ const defaultState = {
   userPersona: 'Friendly, helpful, and knowledgeable.',
   botName: 'TestBot',
   botDescription: 'A friendly AI assistant.',
+  regexScripts: [] as any[],
+  lorebookEntries: [] as any[],
   customVars: {
     'test_var': 'example value'
   } as {[key: string]: string}

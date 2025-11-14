@@ -19,8 +19,11 @@
     cbsOutput = '';
     
     try {
+      // Load all bot data
+      const botData = await loadSelectedBotData();
+      
       const { prepareMockCharacter } = await import('../../ts/mockDatabase');
-      const mockChar = await prepareMockCharacter([]);
+      const mockChar = await prepareMockCharacter(botData);
 
       const { getEditorParser } = await import('../../ts/parser-wrapper');
       const risuChatParser = await getEditorParser();

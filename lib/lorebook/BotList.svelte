@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { loadAvailableBots } from './lorebookLoader.svelte';
+  import { onMount } from 'svelte';
+  import { loadAllBots } from '../shared/botLoader.svelte';
 
   interface Props {
     selectedBot: string;
@@ -11,15 +12,15 @@
   let botList = $state<string[]>([]);
   let loading = $state(false);
 
-  // Load bot list on mount
-  $effect(() => {
+  // Load bot list on mount (once)
+  onMount(() => {
     loadBots();
   });
 
   async function loadBots() {
     loading = true;
     try {
-      botList = await loadAvailableBots();
+      botList = await loadAllBots();
     } catch (error) {
       console.error('Failed to load bots:', error);
     } finally {

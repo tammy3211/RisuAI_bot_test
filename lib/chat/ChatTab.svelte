@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { editorState, saveEditorState } from '../shared/editorState.svelte';
+  import { editorState } from '../shared/editorState.svelte';
   import { processRegexScripts } from '../../ts/regexProcessor';
-  import BotSourceSelector from '../shared/BotSourceSelector.svelte';
+  import BotSettings from '../shared/BotSettings.svelte';
   import { loadSelectedBotData } from '../shared/botLoader.svelte';
   
   // Message type matching RisuAI structure
@@ -109,71 +109,15 @@
     messages = [];
   }
 
-  // Custom variables management
-  let customVars = $derived(editorState.customVars || {});
-
-  function addCustomVar() {
-    const key = prompt('변수 이름:');
-    if (key && key.trim() && !editorState.customVars[key.trim()]) {
-      editorState.addCustomVar(key.trim(), '');
-      saveEditorState();
-    }
-  }
-
-  function removeCustomVar(key: string) {
-    editorState.removeCustomVar(key);
-    saveEditorState();
-  }
-
-  function handleInput() {
-    saveEditorState();
-  }
-
-  function handleCustomVarChange(key: string, value: string) {
-    editorState.customVars[key] = value;
-    saveEditorState();
-  }
-
   async function handleLoadBot() {
     // Reload bot data, regex, and lorebook after selecting a saved bot
     console.log('[ChatTab] Loading bot data...');
     
     if (editorState.botSource === 'saved' && editorState.selectedBot) {
-      const botName = editorState.selectedBot;
-      
-      // Load bot description
       await loadSelectedBotData();
       
-      // Load regex scripts dynamically
-      try {
-        const response = await fetch(`/save/${botName}/regex/regex.json`);
-        if (response.ok) {
-          const regexData = await response.json();
-          editorState.regexScripts = regexData;
-          saveEditorState();
-          console.log('[ChatTab] Loaded regex scripts:', regexData.length);
-        }
-      } catch (err) {
-        console.warn('[ChatTab] No regex scripts found for', botName);
-        editorState.regexScripts = [];
-      }
-      
-      // Load lorebook entries dynamically
-      try {
-        const response = await fetch(`/save/${botName}/lorebook/lorebook.json`);
-        if (response.ok) {
-          const lorebookData = await response.json();
-          editorState.lorebookEntries = lorebookData;
-          saveEditorState();
-          console.log('[ChatTab] Loaded lorebook entries:', lorebookData.length);
-        }
-      } catch (err) {
-        console.warn('[ChatTab] No lorebook found for', botName);
-        editorState.lorebookEntries = [];
-      }
-      
       console.log('[ChatTab] Bot data loaded:', {
-        bot: botName,
+        bot: editorState.selectedBot,
         regexCount: editorState.regexScripts?.length || 0,
         lorebookCount: editorState.lorebookEntries?.length || 0
       });
@@ -282,111 +226,7 @@
 
   <!-- Right: Bot settings -->
   <div class="space-y-6">
-    <!-- Bot Source Selector -->
-    <BotSourceSelector onLoadBot={handleLoadBot} />
-
-    <!-- Bot Info -->
-    <div class="rounded-xl bg-gray-100 p-6">
-      <div class="mb-5 border-b-2 border-slate-200 pb-2.5 text-lg font-semibold text-slate-600">
-        🤖 봇 정보
-      </div>
-      <div class="space-y-4">
-        <div>
-          <label for="bot-name" class="mb-1.5 block text-xs font-semibold text-slate-600">봇 이름:</label>
-          <input
-            id="bot-name"
-            type="text"
-            bind:value={editorState.botName}
-            oninput={handleInput}
-            class="w-full rounded-md border-2 border-slate-200 px-3 py-2.5 text-sm transition focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:opacity-60"
-            placeholder="TestBot"
-            disabled={editorState.botSource === 'saved'}
-          />
-        </div>
-
-        <div>
-          <label for="bot-desc" class="mb-1.5 block text-xs font-semibold text-slate-600">설명 (Description):</label>
-          <textarea
-            id="bot-desc"
-            bind:value={editorState.botDescription}
-            oninput={handleInput}
-            class="min-h-20 w-full resize-y rounded-md border-2 border-slate-200 px-3 py-2.5 text-sm transition focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:opacity-60"
-            placeholder="봇 설명..."
-            disabled={editorState.botSource === 'saved'}
-          ></textarea>
-        </div>
-      </div>
-      {#if editorState.botSource === 'saved'}
-        <p class="pt-4 text-center text-sm italic text-slate-500">ℹ️ 저장된 봇을 선택한 경우 봇 정보는 수정할 수 없습니다.</p>
-      {/if}
-    </div>
-
-    <!-- User Info -->
-    <div class="rounded-xl bg-gray-100 p-6">
-      <div class="mb-5 border-b-2 border-slate-200 pb-2.5 text-lg font-semibold text-slate-600">
-        👤 사용자 정보
-      </div>
-      <div class="space-y-4">
-        <div>
-          <label for="user-name" class="mb-1.5 block text-xs font-semibold text-slate-600">이름:</label>
-          <input
-            id="user-name"
-            type="text"
-            bind:value={editorState.userName}
-            oninput={handleInput}
-            class="w-full rounded-md border-2 border-slate-200 px-3 py-2.5 text-sm transition focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
-            placeholder="User"
-          />
-        </div>
-
-        <div>
-          <label for="user-persona" class="mb-1.5 block text-xs font-semibold text-slate-600">페르소나 (User Description):</label>
-          <textarea
-            id="user-persona"
-            bind:value={editorState.userPersona}
-            oninput={handleInput}
-            class="min-h-20 w-full resize-y rounded-md border-2 border-slate-200 px-3 py-2.5 text-sm transition focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
-            placeholder="사용자의 성격, 특징, 배경..."
-          ></textarea>
-        </div>
-      </div>
-    </div>
-
-    <!-- Custom Variables -->
-    <div class="rounded-xl bg-gray-100 p-6">
-      <div class="mb-5 flex items-center justify-between border-b-2 border-slate-200 pb-2.5 text-lg font-semibold text-slate-600">
-        🔧 일반 변수
-        <button
-          class="rounded bg-indigo-500 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-indigo-600"
-          onclick={addCustomVar}
-        >
-          + 추가
-        </button>
-      </div>
-      <div class="flex flex-col gap-2.5">
-        {#each Object.entries(customVars) as [key]}
-          <div class="flex items-center gap-2.5 rounded-md border border-slate-200 bg-white p-2.5">
-            <div class="min-w-[100px] font-mono text-sm font-semibold text-indigo-500">{key}</div>
-            <input
-              type="text"
-              bind:value={editorState.customVars[key]}
-              oninput={() => handleCustomVarChange(key, editorState.customVars[key])}
-              class="flex-1 rounded border border-slate-200 px-2.5 py-1.5 text-sm focus:border-indigo-400 focus:outline-none"
-              placeholder="값 입력..."
-            />
-            <button
-              class="flex h-6 w-6 items-center justify-center rounded-full bg-rose-500 text-sm text-white transition hover:bg-rose-600"
-              onclick={() => removeCustomVar(key)}
-            >
-              ×
-            </button>
-          </div>
-        {/each}
-        {#if Object.keys(customVars).length === 0}
-          <p class="py-5 text-center text-sm italic text-slate-500">변수가 없습니다. + 버튼을 눌러 추가하세요.</p>
-        {/if}
-      </div>
-    </div>
+    <BotSettings onLoadBot={handleLoadBot} />
   </div>
   </div>
 </div>

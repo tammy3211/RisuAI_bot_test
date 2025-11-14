@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { LorebookEntry } from './lorebookLoader.svelte';
+  import type { LorebookEntry } from '../../ts/mockDatabase';
   import { runLorebookPrompt, type LorebookPromptResult } from '../../ts/lorebookRunner';
   import { generatePromptPreview, type PromptPreviewResult } from '../../ts/promptPreview';
   import ChatInterface from './ChatInterface.svelte';

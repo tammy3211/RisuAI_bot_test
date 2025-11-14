@@ -1,6 +1,6 @@
 <script lang="ts">
   import LorebookTester from './LorebookTester.svelte';
-  import type { LorebookEntry } from './lorebookLoader.svelte';
+  import type { LorebookEntry } from '../../ts/mockDatabase';
 
   interface Props {
     lorebook: LorebookEntry | null;

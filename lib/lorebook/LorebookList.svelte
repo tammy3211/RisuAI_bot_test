@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { LorebookEntry } from './lorebookLoader.svelte';
+  import type { LorebookEntry } from '../../ts/mockDatabase';
 
   interface Props {
     lorebooks: LorebookEntry[];

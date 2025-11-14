@@ -33,7 +33,19 @@ export async function processRegexScripts(
   try {
     // Dynamic import to avoid initialization issues
     const { processScript } = await import('../../src/ts/process/scripts');
-    const mockChar = await prepareMockCharacter(scripts);
+    const botData = {
+      name: 'TestBot',
+      description: '',
+      firstMessage: '',
+      regexScripts: scripts,
+      lorebooks: [],
+      emotionImages: [],
+      additionalAssets: [],
+      ccAssets: [],
+      image: '',
+      triggerscript: []
+    };
+    const mockChar = await prepareMockCharacter(botData);
     return await processScript(mockChar, text, mode, {});
   } catch (error) {
     console.error('Failed to load RisuAI processScript, using fallback:', error);

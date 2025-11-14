@@ -1,4 +1,5 @@
 // 저장된 봇들을 자동으로 로드하고 HMR 지원
+import type { LorebookEntry } from '../../ts/mockDatabase';
 import { editorState, saveEditorState } from './editorState.svelte';
 
 // import.meta.glob으로 모든 description.md 파일 가져오기
@@ -27,10 +28,17 @@ export async function loadAllBots() {
     }
   }
   
-  editorState.savedBots = bots.sort();
-  saveEditorState();
+  const sortedBots = bots.sort();
   
-  return bots;
+  // editorState 업데이트는 하되, 변경사항이 있을 때만 저장
+  const hasChanged = JSON.stringify(editorState.savedBots) !== JSON.stringify(sortedBots);
+  editorState.savedBots = sortedBots;
+  
+  if (hasChanged) {
+    saveEditorState();
+  }
+  
+  return sortedBots;
 }
 
 // 특정 봇의 description 로드 (fetch 사용으로 HMR 지원)
@@ -55,30 +63,15 @@ export async function loadBotDescription(botName: string): Promise<string> {
   }
 }
 
-// 현재 선택된 봇의 description을 자동으로 로드하고 editorState에 반영
-export async function loadSelectedBotData() {
-  if (!editorState.selectedBot) {
-    return;
-  }
-  
-  const description = await loadBotDescription(editorState.selectedBot);
-  
-  // 봇 이름은 폴더 이름과 동일
-  editorState.botName = editorState.selectedBot;
-  editorState.botDescription = description;
-  
-  saveEditorState();
-}
-
-// 초기 로드
-loadAllBots();
+// 초기 로드는 제거 - 각 컴포넌트에서 필요할 때 호출하도록 변경
+// loadAllBots();
 
 /**
  * Load all markdown files from a nested directory structure recursively
  * @param botName - Name of the bot to filter files for
  * @param baseFolder - Base folder name to extract relative paths from (e.g., 'content', 'out')
  * @returns Map of filename/path -> file content
- */
+*/
 export async function loadNestedMarkdownFiles(
   botName: string,
   baseFolder: string
@@ -149,7 +142,7 @@ export async function loadNestedMarkdownFiles(
  * Load regex scripts for a bot with external file resolution
  * @param botName - Name of the bot to load regex scripts for
  * @returns Array of resolved regex scripts with 'out' content loaded from files
- */
+*/
 export async function loadBotRegexScripts(
   botName: string
 ): Promise<Array<{ comment: string; in: string; out: string; outFile?: string; type: string; flag?: string; ableFlag?: boolean }>> {
@@ -160,29 +153,29 @@ export async function loadBotRegexScripts(
     if (!response.ok) {
       return [];
     }
-
+    
     const data = await response.json();
     if (!Array.isArray(data)) {
       return [];
     }
-
+    
     // Load all MD files from regex/out/ directory
     const outFiles = await loadNestedMarkdownFiles(botName, 'regex/out');
     console.log(`[botLoader] Loaded regex outFiles for ${botName}:`, Array.from(outFiles.keys()));
-
+    
     // Resolve out content from files
     const resolvedScripts = await Promise.all(data.map(async (script: any, idx: number) => {
       let outFile = script.outFile;
       let out = script.out ?? '';
-
+      
       // If no outFile specified, try to generate a fallback name
       if (!outFile) {
         const fallbackName = script.comment?.trim().length
-          ? script.comment.trim().replace(/[^a-zA-Z0-9_-]+/g, '_').toLowerCase()
-          : `regex_${idx}`;
+        ? script.comment.trim().replace(/[^a-zA-Z0-9_-]+/g, '_').toLowerCase()
+        : `regex_${idx}`;
         outFile = `${fallbackName}.md`;
       }
-
+      
       // Find matching MD file in out map
       console.log(`[botLoader] Looking for regex outFile: "${outFile}", has: ${outFiles.has(outFile)}`);
       if (outFiles.has(outFile)) {
@@ -191,7 +184,7 @@ export async function loadBotRegexScripts(
       } else if (!out) {
         console.warn(`[botLoader] Regex output file not found in out/: ${outFile}`);
       }
-
+      
       return {
         comment: script.comment ?? '',
         in: script.in ?? '',
@@ -202,7 +195,7 @@ export async function loadBotRegexScripts(
         ableFlag: script.ableFlag ?? true
       };
     }));
-
+    
     console.log(`[botLoader] Loaded ${resolvedScripts.length} regex scripts for ${botName}`);
     return resolvedScripts;
   } catch (error) {
@@ -210,3 +203,246 @@ export async function loadBotRegexScripts(
     return [];
   }
 }
+
+/**
+ * Load first message for a bot
+ * @param botName - Name of the bot to load first message for
+ * @returns First message content or empty string
+*/
+export async function loadBotFirstMes(botName: string): Promise<string> {
+  try {
+    const response = await fetch(`/save/${botName}/first_mes.md?t=${Date.now()}`);
+    if (response.ok) {
+      return await response.text();
+    }
+    return '';
+  } catch (err) {
+    console.warn(`[botLoader] No first_mes.md found for ${botName}`);
+    return '';
+  }
+}
+
+/**
+ * Load trigger script for a bot from lua_script/main.lua
+ * @param botName - Name of the bot to load trigger script for
+ * @returns Array with single triggerscript object containing Lua code
+*/
+export async function loadBotTriggerScript(botName: string): Promise<any[]> {
+  try {
+    const luaPath = `/save/${botName}/lua_script/main.lua`;
+    const response = await fetch(luaPath + '?t=' + Date.now());
+    
+    if (!response.ok) {
+      return [];
+    }
+    
+    const luaCode = await response.text();
+    console.log(`[botLoader] Loaded Lua script for ${botName}:`, luaCode.substring(0, 100));
+    
+    // Create triggerscript format
+    return [{
+      comment: 'Lua Script',
+      type: 'start',
+      conditions: [],
+      effect: [{
+        type: 'triggerlua',
+        code: luaCode
+      }]
+    }];
+  } catch (error) {
+    console.warn(`[botLoader] Failed to load Lua script for ${botName}:`, error);
+    return [];
+  }
+}
+
+/**
+ * Load assets for a bot
+ * @param botName - Name of the bot to load assets for
+ * @returns Object with emotionImages, additionalAssets, and ccAssets arrays
+*/
+export async function loadBotAssets(
+  botName: string
+): Promise<{
+  emotionImages: [string, string][];
+  additionalAssets: [string, string, string][];
+  ccAssets: Array<{ type: string; uri: string; name: string; ext: string }>;
+  mainImage: string;
+}> {
+  try {
+    const assetsPath = `/save/${botName}/assets/assets.json`;
+    const response = await fetch(assetsPath + '?t=' + Date.now());
+    
+    if (!response.ok) {
+      console.warn(`No assets found for bot: ${botName}`);
+      return {
+        emotionImages: [],
+        additionalAssets: [],
+        ccAssets: [],
+        mainImage: ''
+      };
+    }
+    
+    const assets = await response.json();
+    if (!Array.isArray(assets)) {
+      console.warn(`Invalid assets format for bot: ${botName}`);
+      return {
+        emotionImages: [],
+        additionalAssets: [],
+        ccAssets: [],
+        mainImage: ''
+      };
+    }
+    
+    const emotionImages: [string, string][] = [];
+    const additionalAssets: [string, string, string][] = [];
+    const ccAssets: Array<{ type: string; uri: string; name: string; ext: string }> = [];
+    let mainImage = '';
+    
+    // Process each asset based on type (like CharX v3 import)
+    for (const asset of assets) {
+      const fileName = asset.name || '';
+      const imgPath = `/save/${botName}/assets/${asset.uri}`;
+      
+      if (asset.type === 'emotion') {
+        // Emotion images: [name, path]
+        emotionImages.push([fileName, imgPath]);
+      } else if (asset.type === 'x-risu-asset') {
+        // Additional assets: [name, path, ext]
+        additionalAssets.push([fileName, imgPath, asset.ext || 'unknown']);
+      } else if (asset.type === 'icon' && asset.name === 'main') {
+        // Main icon
+        mainImage = imgPath;
+      } else {
+        // Other assets go to ccAssets
+        ccAssets.push({
+          type: asset.type ?? 'asset',
+          uri: imgPath,
+          name: fileName,
+          ext: asset.ext ?? 'unknown'
+        });
+      }
+    }
+    
+    console.log(`[botLoader] Loaded assets for ${botName}:`, {
+      emotions: emotionImages.length,
+      additional: additionalAssets.length,
+      cc: ccAssets.length,
+      hasMain: !!mainImage
+    });
+    
+    return {
+      emotionImages,
+      additionalAssets,
+      ccAssets,
+      mainImage
+    };
+  } catch (error) {
+    console.warn(`[botLoader] Failed to load assets for ${botName}:`, error);
+    return {
+      emotionImages: [],
+      additionalAssets: [],
+      ccAssets: [],
+      mainImage: ''
+    };
+  }
+}
+
+// Load lorebook for a specific bot
+
+export async function loadBotLorebook(botName: string): Promise<LorebookEntry[]> {
+  try {
+    const lorebookPath = `/save/${botName}/lorebook/lorebook.json`;
+    const response = await fetch(lorebookPath + '?t=' + Date.now());
+    
+    if (!response.ok) {
+      console.warn(`No lorebook found for bot: ${botName}`);
+      return [];
+    }
+    
+    const lorebooks: LorebookEntry[] = await response.json();
+    
+    // Build a map of all MD files in content/ directory
+    const contentFiles = await loadNestedMarkdownFiles(botName, 'lorebook/content');
+    
+    console.log('[lorebookLoader] Available MD files:', Array.from(contentFiles.keys()));
+    
+    // Load MD content for each lorebook entry
+    for (const entry of lorebooks) {
+      const match = entry.content?.match(/^\{(.+?)\}$/);
+      if (match) {
+        const mdFileName = match[1];
+        
+        console.log(`[lorebookLoader] Looking for: ${mdFileName}`);
+        
+        // Find matching MD file in content map
+        if (contentFiles.has(mdFileName)) {
+          entry.mdContent = contentFiles.get(mdFileName);
+          entry.mdFile = mdFileName;
+          console.log(`[lorebookLoader] ✅ Loaded: ${mdFileName}`);
+        } else {
+          console.warn(`[lorebookLoader] ❌ MD file not found: ${mdFileName}`);
+          console.warn(`[lorebookLoader] Available keys:`, Array.from(contentFiles.keys()));
+          entry.mdContent = '';
+          entry.mdFile = mdFileName;
+        }
+      }
+    }
+    
+    return lorebooks;
+  } catch (error) {
+    console.error(`Failed to load lorebook for ${botName}:`, error);
+    return [];
+  }
+}
+
+// 현재 선택된 봇의 모든 데이터를 로드하고 mock character 객체를 반환
+export async function loadSelectedBotData() {
+  if (!editorState.selectedBot) {
+    return {
+      name: '',
+      description: '',
+      firstMessage: '',
+      regexScripts: [],
+      lorebooks: [],
+      emotionImages: [],
+      additionalAssets: [],
+      ccAssets: [],
+      image: '',
+      triggerscript: []
+    };
+  }
+  
+  const botName = editorState.selectedBot;
+  
+  // Load all bot data in parallel
+  const [description, regexScripts, lorebooks, firstMessage, assets, triggerScript] = await Promise.all([
+    loadBotDescription(botName),
+    loadBotRegexScripts(botName),
+    loadBotLorebook(botName),
+    loadBotFirstMes(botName),
+    loadBotAssets(botName),
+    loadBotTriggerScript(botName)
+  ]);
+  
+  // Update editorState
+  editorState.botName = botName;
+  editorState.botDescription = description;
+  editorState.regexScripts = regexScripts;
+  editorState.lorebookEntries = lorebooks;
+  
+  saveEditorState();
+  
+  return {
+    name: botName,
+    description,
+    firstMessage,
+    regexScripts,
+    lorebooks,
+    emotionImages: assets.emotionImages,
+    additionalAssets: assets.additionalAssets,
+    ccAssets: assets.ccAssets,
+    image: assets.mainImage,
+    triggerscript: triggerScript
+  };
+}
+

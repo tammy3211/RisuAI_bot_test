@@ -1,4 +1,4 @@
-import type { LorebookEntry } from '../lib/lorebook/lorebookLoader.svelte';
+import type { LorebookEntry } from './mockDatabase';
 import { setupDatabaseMocks, getMockDatabase, getMockCharacter } from './mockDatabase';
 
 export interface LorebookPromptResult {
