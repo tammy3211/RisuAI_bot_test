@@ -258,23 +258,8 @@
               class="rounded-md bg-slate-600 px-3 py-2 text-white transition hover:-translate-y-0.5"
               onclick={toggleExpand}
             >
-              {isExpanded ? '▼ Collapse' : '▶ Expand'}
+              {isExpanded ? '▼ 접기' : '▶ 펼치기'}
             </button>
-            {#if !isExpanded && regexList.length > 0}
-              <button
-                class="rounded-md bg-sky-500 px-3 py-1.5 text-white transition hover:-translate-y-0.5"
-                onclick={goToPrevious}
-              >
-                ◀ Prev
-              </button>
-              <span class="text-sm text-slate-600">{currentIndex + 1} / {regexList.length}</span>
-              <button
-                class="rounded-md bg-sky-500 px-3 py-1.5 text-white transition hover:-translate-y-0.5"
-                onclick={goToNext}
-              >
-                Next ▶
-              </button>
-            {/if}
             <button
               class="rounded-md bg-slate-200 px-3 py-2 text-slate-700 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
               onclick={resetRegexList}
@@ -286,7 +271,7 @@
               class="rounded-md bg-gradient-to-r from-indigo-500 to-purple-500 px-3 py-2 text-white transition hover:-translate-y-0.5"
               onclick={addRegex}
             >
-              + Add
+              + 추가
             </button>
           </div>
         </div>
@@ -301,7 +286,7 @@
               />
             {:else}
               <p class="py-5 text-center text-sm italic text-slate-500">
-                No regex entries yet. Use '+ Add' to define a new rule.
+                정규식이 없습니다. '+ 추가'를 사용하여 새 정규식을 정의하세요.
               </p>
             {/each}
           {:else if regexList.length > 0}
@@ -312,10 +297,28 @@
             />
           {:else}
             <p class="py-5 text-center text-sm italic text-slate-500">
-              No regex entries yet. Use '+ Add' to define a new rule.
+              정규식이 없습니다. '+ 추가'를 사용하여 새 정규식을 정의하세요.
             </p>
           {/if}
         </div>
+
+        {#if !isExpanded && regexList.length > 0}
+          <div class="mt-4 flex items-center justify-center gap-3 border-t-2 border-slate-200 pt-4">
+            <button
+              class="rounded-md bg-sky-500 px-3 py-1.5 text-sm font-semibold text-white transition hover:-translate-y-0.5"
+              onclick={goToPrevious}
+            >
+              ◀ Prev
+            </button>
+            <span class="text-sm font-semibold text-slate-600">{currentIndex + 1} / {regexList.length}</span>
+            <button
+              class="rounded-md bg-sky-500 px-3 py-1.5 text-sm font-semibold text-white transition hover:-translate-y-0.5"
+              onclick={goToNext}
+            >
+              Next ▶
+            </button>
+          </div>
+        {/if}
       </div>
 
       <RegexTester
