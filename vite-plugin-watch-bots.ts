@@ -8,17 +8,12 @@ export function watchBotsPlugin(): Plugin {
     configureServer(_server) {
       server = _server;
 
-      // save 폴더의 파일 변경 감지
-      server.watcher.add('save/**/*.md');
-      server.watcher.add('save/**/lorebook/*.json');
+      // save 폴더의 모든 파일 변경 감지
+      server.watcher.add('save/**/*');
 
       server.watcher.on('change', (path) => {
-        // description.md 또는 lorebook 폴더의 파일 변경 시 리로드
-        const shouldReload = 
-          (path.includes('save') && path.endsWith('description.md')) ||
-          (path.includes('save') && path.includes('lorebook') && (path.endsWith('.json') || path.endsWith('.md')));
-
-        if (shouldReload) {
+        // save 폴더 내 모든 파일 변경 시 리로드
+        if (path.includes('save')) {
           console.log('🔄 [watch-bots] File changed:', path);
           console.log('🔄 [watch-bots] Triggering full page reload...');
           

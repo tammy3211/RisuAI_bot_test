@@ -37,6 +37,7 @@
   let isGeneratingPreview = $state(false);
   let firstMessage = $state('Hello!');
   let regexScripts = $state<Array<{ comment: string; in: string; out: string; type: string; flag?: string; ableFlag?: boolean }>>([]);
+  let isChatExpanded = $state(false);
 
   // first_mes.md와 정규식 스크립트 로드
   $effect(() => {
@@ -121,9 +122,18 @@
   <div class="flex flex-col gap-3 rounded-xl border border-gray-300 bg-white p-5 shadow-sm">
     <div class="flex items-center justify-between">
       <span class="text-sm font-semibold text-gray-700">💬 테스트 대화</span>
-      <span class="text-xs text-gray-500">{messages.length}개 메시지</span>
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-gray-500">{messages.length}개 메시지</span>
+        <button
+          class="rounded-md px-2 py-1 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-100"
+          onclick={() => isChatExpanded = !isChatExpanded}
+          title={isChatExpanded ? '접기' : '펼치기'}
+        >
+          {isChatExpanded ? '▲ 접기' : '▼ 펼치기'}
+        </button>
+      </div>
     </div>
-    <div class="min-h-[300px]">
+    <div class={isChatExpanded ? 'min-h-[300px]' : 'h-[700px]'}>
       <ChatInterface 
         onMessagesChange={handleMessagesChange}
         firstMessage={firstMessage}
