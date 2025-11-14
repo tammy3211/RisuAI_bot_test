@@ -80,13 +80,14 @@ export async function loadNestedMarkdownFiles(
   
   try {
     // Use Vite's glob import to find all .md files recursively
-    const modules = import.meta.glob('/save/*/**/*.md', { 
+    const modules = import.meta.glob('/save/**/*.md', { 
       eager: false, 
       query: '?raw', 
       import: 'default' 
     });
     
     console.log(`[botLoader] Looking for files in /save/${botName}/${baseFolder}/`);
+    console.log(`[botLoader] Total glob matches:`, Object.keys(modules).length);
     
     for (const path in modules) {
       // Check if this path matches the pattern for current bot
@@ -95,7 +96,8 @@ export async function loadNestedMarkdownFiles(
       }
       
       // Check if path includes the base folder
-      const folderPattern = new RegExp(`/save/${botName}/${baseFolder}/(.+\\.md)$`);
+      const escapedBotName = botName.replace(/[()]/g, '\\$&');
+      const folderPattern = new RegExp(`/save/${escapedBotName}/${baseFolder.replace(/[()]/g, '\\$&')}/(.+\\.md)$`);
       const match = path.match(folderPattern);
       
       if (match) {
@@ -229,7 +231,7 @@ export async function loadBotFirstMes(botName: string): Promise<string> {
 */
 export async function loadBotTriggerScript(botName: string): Promise<any[]> {
   try {
-    const luaPath = `/save/${botName}/lua_script/main.lua`;
+    const luaPath = `/save/${botName}/triggerscript/lua_script/main.lua`;
     const response = await fetch(luaPath + '?t=' + Date.now());
     
     if (!response.ok) {
@@ -430,6 +432,29 @@ export async function loadSelectedBotData() {
   editorState.regexScripts = regexScripts;
   editorState.lorebookEntries = lorebooks;
   
+  // Prepare mock character for ChatParser
+  const botData = {
+    name: botName,
+    description,
+    firstMessage,
+    regexScripts,
+    lorebooks,
+    emotionImages: assets.emotionImages,
+    additionalAssets: assets.additionalAssets,
+    ccAssets: assets.ccAssets,
+    image: assets.mainImage,
+    triggerscript: triggerScript
+  };
+  
+  try {
+    const { prepareMockCharacter } = await import('../../ts/mockDatabase');
+    await prepareMockCharacter(botData);
+    console.log('[botLoader] Mock character prepared for:', botName);
+  } catch (error) {
+    console.error('[botLoader] Failed to prepare mock character:', error);
+  }
+  
+  // Save to localStorage so bot selection persists across page refreshes
   saveEditorState();
   
   return {

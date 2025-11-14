@@ -52,6 +52,12 @@ export function saveEditorState() {
       customVars: plainCustomVars
     };
     
+    // botSource가 'saved'일 때는 selectedBot도 저장
+    if (editorState.botSource === 'saved') {
+      dataToSave.selectedBot = editorState.selectedBot;
+      console.log('[editorState] Saving selectedBot:', editorState.selectedBot);
+    }
+    
     // botSource가 'saved'가 아닐 때만 botName과 botDescription 저장
     if (editorState.botSource !== 'saved') {
       dataToSave.botName = editorState.botName;

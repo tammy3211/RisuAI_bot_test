@@ -3,11 +3,13 @@ import { svelte } from '@sveltejs/vite-plugin-svelte';
 import path from "path";
 import { mockGlobalApiPlugin } from './vite-plugin-mock-globalapi';
 import { watchBotsPlugin } from './vite-plugin-watch-bots';
+import { patchScriptsPlugin } from './vite-plugin-patch-scripts';
 import wasm from 'vite-plugin-wasm';
 import topLevelAwait from 'vite-plugin-top-level-await';
 
 export default defineConfig({
   plugins: [
+    patchScriptsPlugin(), // Patch scripts.ts to fix processScriptCache issue
     mockGlobalApiPlugin(), // MUST be first to intercept imports
     wasm(),
     topLevelAwait(),

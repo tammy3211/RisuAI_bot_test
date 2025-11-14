@@ -23,6 +23,36 @@ export interface LorebookEntry {
   mdFile?: string;
 }
 
+// Chat data structures (matching RisuAI)
+export interface Message {
+  role: 'user' | 'char';
+  data: string;
+  saying?: string;
+  chatId?: string;
+  time?: number;
+  name?: string;
+  otherUser?: boolean;
+}
+
+export interface Chat {
+  message: Message[];
+  note: string;
+  name: string;
+  localLore: LorebookEntry[];
+  sdData?: string;
+  supaMemoryData?: string;
+  lastMemory?: string;
+  suggestMessages?: string[];
+  isStreaming?: boolean;
+  scriptstate?: {[key: string]: string | number | boolean};
+  modules?: string[];
+  id?: string;
+  bindedPersona?: string;
+  fmIndex?: number;
+  folderId?: string;
+  lastDate?: number;
+}
+
 export interface BotData {
   name: string;
   description: string;
@@ -34,6 +64,7 @@ export interface BotData {
   ccAssets: Array<{ type: string; uri: string; name: string; ext: string }>;
   image: string;
   triggerscript: any[];
+  chats?: Chat[];  // 채팅 데이터 추가
 }
 
 let storeSetupPromise: Promise<void> | null = null;
@@ -47,15 +78,63 @@ function buildScriptState() {
   return scriptstate;
 }
 
-function createMockChat() {
+function createMockChat(): Chat {
   return {
-    message: [] as any[],
+    message: [],
     note: '',
     name: 'Mock Chat',
-    localLore: [] as any[],
-    modules: [] as string[],
+    localLore: [],
+    modules: [],
     scriptstate: buildScriptState(),
-    id: 'mock-chat'
+    id: 'mock-chat',
+    lastDate: Date.now()
+  };
+}
+
+// Helper functions for creating chat data
+export function createSampleMessage(role: 'user' | 'char', data: string, time?: number): Message {
+  return {
+    role,
+    data,
+    time: time || Date.now()
+  };
+}
+
+export function createSampleChat(name: string, messages: Message[], note: string = ''): Chat {
+  return {
+    message: messages,
+    note,
+    name,
+    localLore: [],
+    modules: [],
+    scriptstate: buildScriptState(),
+    id: `chat-${Date.now()}-${Math.random()}`,
+    lastDate: Date.now()
+  };
+}
+
+export function createSampleBotDataWithChats(): BotData {
+  const sampleMessages: Message[] = [
+    createSampleMessage('user', '안녕하세요!'),
+    createSampleMessage('char', '안녕하세요! 만나서 반가워요~'),
+    createSampleMessage('user', '오늘 날씨가 좋네요.'),
+    createSampleMessage('char', '네, 정말 좋은 날씨예요! 산책하기 딱 좋겠어요.')
+  ];
+
+  const sampleChat = createSampleChat('샘플 채팅', sampleMessages, '샘플 채팅 노트');
+
+  return {
+    name: '샘플 봇',
+    description: '샘플 봇 설명입니다.',
+    firstMessage: '안녕하세요! 샘플 봇입니다.',
+    regexScripts: [],
+    lorebooks: [],
+    emotionImages: [],
+    additionalAssets: [],
+    ccAssets: [],
+    image: '',
+    triggerscript: [],
+    chats: [sampleChat]
   };
 }
 
@@ -270,7 +349,14 @@ export async function prepareMockCharacter(botData: BotData) {
     mockChar.image = botData.image || '';
     mockChar.triggerscript = botData.triggerscript as any;
     
-    if (!Array.isArray(mockChar.chats) || mockChar.chats.length === 0) {
+    // Apply chats data if provided
+    if (botData.chats && botData.chats.length > 0) {
+      mockChar.chats = botData.chats.map(chat => ({
+        ...chat,
+        scriptstate: chat.scriptstate || buildScriptState(),
+        id: chat.id || `chat-${Date.now()}-${Math.random()}`
+      }));
+    } else if (!Array.isArray(mockChar.chats) || mockChar.chats.length === 0) {
       mockChar.chats = [createMockChat()];
     }
     mockChar.chatPage = 0;
@@ -303,6 +389,16 @@ export async function prepareMockCharacter(botData: BotData) {
     fallbackChar.ccAssets = botData.ccAssets as any;
     fallbackChar.image = botData.image || '';
     fallbackChar.triggerscript = botData.triggerscript as any;
-    return fallbackChar;
+    
+    // Apply chats data if provided
+    if (botData.chats && botData.chats.length > 0) {
+      fallbackChar.chats = botData.chats.map(chat => ({
+        ...chat,
+        scriptstate: chat.scriptstate || buildScriptState(),
+        id: chat.id || `chat-${Date.now()}-${Math.random()}`
+      }));
+    } else if (!Array.isArray(fallbackChar.chats) || fallbackChar.chats.length === 0) {
+      fallbackChar.chats = [createMockChat()];
+    }
   }
 }
