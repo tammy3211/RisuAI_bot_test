@@ -1,6 +1,7 @@
 <script lang="ts">
   import { editorState, saveEditorState } from './editorState.svelte';
   import BotSourceSelector from './BotSourceSelector.svelte';
+  import Modal from '../UI/Modal.svelte';
   
   interface Props {
     onLoadBot?: () => void;
@@ -161,46 +162,39 @@
 </div>
 
 <!-- 변수 추가 모달 -->
-{#if showAddVarModal}
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onclick={cancelAddVar}>
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl" onclick={(e) => e.stopPropagation()}>
-      <h3 class="mb-4 text-lg font-semibold text-slate-700">새 변수 추가</h3>
-      <div class="mb-5">
-        <label for="new-var-name" class="mb-1.5 block text-xs font-semibold text-slate-600">변수 이름:</label>
-        <!-- svelte-ignore a11y_autofocus -->
-        <input
-          id="new-var-name"
-          type="text"
-          bind:value={newVarName}
-          oninput={() => showDuplicateError = false}
-          onkeydown={(e) => e.key === 'Enter' && confirmAddVar()}
-          class="w-full rounded-md border-2 border-slate-200 px-3 py-2.5 text-sm transition focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
-          placeholder="예: myVariable"
-          autofocus
-        />
-        {#if showDuplicateError}
-          <p class="mt-1.5 text-xs text-rose-500">⚠️ 이미 존재하는 변수명입니다. 다른 이름을 입력해주세요.</p>
-        {/if}
-      </div>
-      <div class="flex justify-end gap-2.5">
-        <button
-          class="rounded-md bg-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-300"
-          onclick={cancelAddVar}
-        >
-          취소
-        </button>
-        <button
-          class="rounded-md bg-indigo-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-50"
-          onclick={confirmAddVar}
-          disabled={!newVarName.trim()}
-        >
-          추가
-        </button>
-      </div>
-    </div>
-  </div>
-{/if}
+<Modal
+  isOpen={showAddVarModal}
+  title="새 변수 추가"
+  onClose={cancelAddVar}
+  actions={[
+    {
+      label: '취소',
+      onClick: cancelAddVar,
+      variant: 'secondary'
+    },
+    {
+      label: '추가',
+      onClick: confirmAddVar,
+      variant: 'primary',
+      disabled: !newVarName.trim()
+    }
+  ]}
+>
+  {#snippet children()}
+    <label for="new-var-name" class="mb-1.5 block text-xs font-semibold text-slate-600">변수 이름:</label>
+    <!-- svelte-ignore a11y_autofocus -->
+    <input
+      id="new-var-name"
+      type="text"
+      bind:value={newVarName}
+      oninput={() => showDuplicateError = false}
+      onkeydown={(e) => e.key === 'Enter' && confirmAddVar()}
+      class="w-full rounded-md border-2 border-slate-200 px-3 py-2.5 text-sm transition focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+      placeholder="예: myVariable"
+      autofocus
+    />
+    {#if showDuplicateError}
+      <p class="mt-1.5 text-xs text-rose-500">⚠️ 이미 존재하는 변수명입니다. 다른 이름을 입력해주세요.</p>
+    {/if}
+  {/snippet}
+</Modal>
