@@ -4,7 +4,7 @@
 import { processScriptFull } from '../../src/ts/process/scripts';
 import { runTrigger } from '../../src/ts/process/triggers';
 import { runLuaEditTrigger } from '../../src/ts/process/scriptings';
-import { getCurrentChat, getCurrentCharacter, type Chat, type Message } from '../../src/ts/storage/database.svelte';
+import { getCurrentChat, getCurrentCharacter, setCurrentChat, type Chat, type Message } from '../../src/ts/storage/database.svelte';
 
 // 채팅 파싱 결과 인터페이스
 export interface ChatParseResult {
@@ -15,6 +15,41 @@ export interface ChatParseResult {
   displayText: string;
   triggersExecuted: string[];
   scriptStates: {[key: string]: any};
+  storedMessage?: Message | null;
+  messageIndex?: number;
+}
+
+interface AppendMessageResult {
+  message: Message;
+  index: number;
+}
+
+function ensureCurrentChat(): Chat {
+  const chat = getCurrentChat();
+  if (!chat) {
+    throw new Error('No active chat');
+  }
+  if (!Array.isArray(chat.message)) {
+    chat.message = [];
+  }
+  return chat;
+}
+
+function appendMessageToChat(role: Message['role'], data: string): AppendMessageResult {
+  const chat = ensureCurrentChat();
+  const newMessage: Message = {
+    role,
+    data,
+    time: Date.now()
+  };
+
+  chat.message.push(newMessage);
+  setCurrentChat(chat);
+
+  return {
+    message: newMessage,
+    index: chat.message.length - 1
+  };
 }
 
 /**
@@ -28,9 +63,9 @@ export async function processUserInput(userInput: string): Promise<string> {
 
   console.log('[ChatParser] Processing user input:', userInput);
 
-  // 타임아웃으로 무한 루프 방지 (3초)
+  // 타임아웃으로 무한 루프 방지 (5초)
   const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error('processUserInput timeout')), 3000);
+    setTimeout(() => reject(new Error('processUserInput timeout')), 5000);
   });
 
   try {
@@ -210,7 +245,9 @@ export async function simulateUserInputFlow(userInput: string): Promise<ChatPars
     processedResponse: '',
     displayText: '',
     triggersExecuted: [],
-    scriptStates: {}
+    scriptStates: {},
+    storedMessage: null,
+    messageIndex: undefined
   };
 
   try {
@@ -220,7 +257,12 @@ export async function simulateUserInputFlow(userInput: string): Promise<ChatPars
     result.processedInput = await processUserInput(userInput);
     result.triggersExecuted.push('editinput');
 
-    // 2. Start 트리거 실행
+    // 2. 현재 채팅에 메시지 저장 (editinput 결과만 저장)
+    const { message, index } = appendMessageToChat('user', result.processedInput);
+    result.storedMessage = message;
+    result.messageIndex = index;
+
+    // 3. Start 트리거 실행 (저장된 메시지를 기반으로 동작)
     console.log('[ChatParser] Running start triggers...');
     const startTriggerResult = await runChatTriggers('start');
     result.triggersExecuted.push('start');
@@ -234,7 +276,7 @@ export async function simulateUserInputFlow(userInput: string): Promise<ChatPars
     result.processedResponse = '';
     result.displayText = result.processedInput;
 
-    // 3. 현재 채팅의 scriptstate 저장
+    // 4. 현재 채팅의 scriptstate 저장
     const currentChat = getCurrentChat();
     if (currentChat?.scriptstate) {
       result.scriptStates = { ...currentChat.scriptstate };
@@ -262,7 +304,9 @@ export async function simulateAIResponseFlow(aiResponse: string): Promise<ChatPa
     processedResponse: '',
     displayText: '',
     triggersExecuted: [],
-    scriptStates: {}
+    scriptStates: {},
+    storedMessage: null,
+    messageIndex: undefined
   };
 
   try {
@@ -273,15 +317,18 @@ export async function simulateAIResponseFlow(aiResponse: string): Promise<ChatPa
     result.processedResponse = await processAIResponse(result.aiResponse);
     result.triggersExecuted.push('editoutput');
 
-    // 2. Output 트리거 실행
+    // 2. 현재 채팅에 메시지 저장 (editoutput 결과만 저장)
+    const { message, index } = appendMessageToChat('char', result.processedResponse);
+    result.storedMessage = message;
+    result.messageIndex = index;
+
+    // 3. Output 트리거 실행
     console.log('[ChatParser] Running output triggers...');
     await runChatTriggers('output');
     result.triggersExecuted.push('output');
 
-    // 3. 표시 처리
-    console.log('[ChatParser] Processing display...');
-    result.displayText = await processDisplay(result.processedResponse);
-    result.triggersExecuted.push('editdisplay');
+    // Display stage는 ChatScreen에서 ChatData 기반으로 실행
+    result.displayText = result.processedResponse;
 
     // 4. 현재 채팅의 scriptstate 저장
     const currentChat = getCurrentChat();
@@ -305,14 +352,15 @@ export async function simulateAIResponseFlow(aiResponse: string): Promise<ChatPa
 /**
  * 현재 캐릭터의 채팅 데이터를 가져옵니다
  */
-export function getCurrentChatData(): { character: any; chat: Chat | null; messages: Message[] } {
+export function getCurrentChatData(): { character: any; chat: Chat | null; messages: Message[]; firstMessage: string } {
   const character = getCurrentCharacter();
   const chat = getCurrentChat();
 
   return {
     character,
     chat,
-    messages: chat?.message || []
+    messages: chat?.message || [],
+    firstMessage: character?.firstMessage || ''
   };
 }
 
@@ -325,4 +373,18 @@ export function logChatData(label: string = 'Chat Data') {
   console.log(`[${label}] Chat:`, data.chat?.name);
   console.log(`[${label}] Messages:`, data.messages.length);
   console.log(`[${label}] Script State:`, data.chat?.scriptstate);
+}
+
+export function clearCurrentChatMessages() {
+  try {
+    const chat = getCurrentChat();
+    if (!chat) {
+      return;
+    }
+    chat.message = [];
+    setCurrentChat(chat);
+    console.log('[ChatParser] Cleared current chat messages');
+  } catch (error) {
+    console.error('[ChatParser] Failed to clear chat messages:', error);
+  }
 }

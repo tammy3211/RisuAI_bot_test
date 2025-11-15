@@ -133,7 +133,7 @@
         </button>
       </div>
     </div>
-    <div class={isChatExpanded ? 'min-h-[300px]' : 'h-[700px]'}>
+    <div class={isChatExpanded ? 'min-h-[700px]' : 'h-[700px]'}>
       <ChatInterface 
         onMessagesChange={handleMessagesChange}
         firstMessage={firstMessage}

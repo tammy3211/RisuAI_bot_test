@@ -27,7 +27,7 @@
   let regexList = $state<Array<CustomScript & { id: string }>>([]);
   let isLoadingRegex = $state(false);
   let lastLoadedKey = '';
-  let isExpanded = $state(true);
+  let isExpanded = $state(false);
   let currentIndex = $state(0);
 
   onMount(async () => {

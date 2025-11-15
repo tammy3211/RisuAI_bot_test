@@ -61,5 +61,14 @@
     "type": "editprocess",
     "flag": "g",
     "ableFlag": true
+  },
+  {
+    "comment": "디스플레이 수정 테스트",
+    "in": "\\{display\\}",
+    "out": "",
+    "outFile": "display_modification.md",
+    "type": "editdisplay",
+    "flag": "g",
+    "ableFlag": true
   }
 ]

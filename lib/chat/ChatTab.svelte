@@ -1,8 +1,11 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { editorState } from '../shared/editorState.svelte';
   import BotSettings from '../shared/BotSettings.svelte';
   import ChatScreen from './ChatScreen.svelte';
   import { loadSelectedBotData } from '../shared/botLoader.svelte';
+
+  let chatScreenRef: any;
 
   async function handleLoadBot() {
     // Reload bot data after selecting a saved bot
@@ -16,8 +19,21 @@
         regexCount: editorState.regexScripts?.length || 0,
         lorebookCount: editorState.lorebookEntries?.length || 0
       });
+
+      // Refresh ChatScreen to show first message
+      if (chatScreenRef?.refresh) {
+        chatScreenRef.refresh();
+      }
     }
   }
+
+  // Load bot data on mount if already selected (e.g., after page refresh)
+  onMount(() => {
+    if (editorState.botSource === 'saved' && editorState.selectedBot) {
+      console.log('[ChatTab] onMount - Loading saved bot:', editorState.selectedBot);
+      handleLoadBot();
+    }
+  });
 </script>
 
 <div class="space-y-7">
@@ -51,7 +67,7 @@
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_400px]">
     <!-- Left: Chat Screen -->
     <div class="h-[700px] rounded-xl border border-gray-300 bg-white overflow-hidden">
-      <ChatScreen />
+      <ChatScreen bind:this={chatScreenRef} />
     </div>
 
     <!-- Right: Bot settings -->

@@ -1,16 +1,114 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { editorState } from '../shared/editorState.svelte';
-  import { simulateUserInputFlow, simulateAIResponseFlow, type ChatParseResult } from '../../ts/ChatParser';
+  import {
+    simulateUserInputFlow,
+    simulateAIResponseFlow,
+    processDisplay,
+    getCurrentChatData,
+    clearCurrentChatMessages,
+    type ChatParseResult
+  } from '../../ts/ChatParser';
   import type { Message } from '../../ts/mockDatabase';
 
   // Chat state
-  let messages = $state<Message[]>([]);
+  type DisplayMessage = Message & { displayText: string };
+  let messages = $state<DisplayMessage[]>([]);
   let messageInput = $state('');
   let isProcessing = $state(false);
   let selectedRole = $state<'user' | 'char'>('user');
+  let lastRenderedIndex = -1;
+  let firstMessage = $state('');
+  let firstMessageLoading = $state(false);
 
   // Chat parsing results for debugging
   let lastParseResult = $state<ChatParseResult | null>(null);
+
+  async function hydrateMessages(fromStart = false) {
+    if (fromStart) {
+      messages = [];
+      lastRenderedIndex = -1;
+    }
+
+    const chatData = getCurrentChatData();
+    const rawFirstMessage = chatData.firstMessage;
+    
+    // Always update first message when hydrating
+    firstMessage = rawFirstMessage;
+    
+    // Process display asynchronously in background
+    if (rawFirstMessage) {
+      firstMessageLoading = true;
+      processDisplay(rawFirstMessage, -1)
+        .then(processed => {
+          firstMessage = processed;
+          firstMessageLoading = false;
+        })
+        .catch(displayError => {
+          console.error('[ChatScreen] Failed to build display text for first message:', displayError);
+          firstMessageLoading = false;
+        });
+    } else {
+      firstMessageLoading = false;
+    }
+    
+    if (!chatData.messages || chatData.messages.length === 0) {
+      messages = [];
+      lastRenderedIndex = -1;
+      return;
+    }
+
+    const startIndex = Math.max(0, lastRenderedIndex + 1);
+    if (startIndex >= chatData.messages.length) {
+      return;
+    }
+
+    for (let i = startIndex; i < chatData.messages.length; i++) {
+      const base = chatData.messages[i];
+      const sourceText = base?.data ?? '';
+      let displayText = sourceText;
+      try {
+        displayText = await processDisplay(sourceText, i);
+      } catch (displayError) {
+        console.error('[ChatScreen] Failed to build display text:', displayError);
+      }
+
+      messages.push({
+        ...base,
+        displayText
+      });
+      lastRenderedIndex = i;
+    }
+  }
+
+  // Track the current bot to detect changes
+  let currentBotName = $state<string | null>(null);
+
+  onMount(() => {
+    currentBotName = editorState.selectedBot;
+  });
+
+  $effect(() => {
+    const bot = editorState.selectedBot;
+    
+    // Only re-hydrate if the bot actually changed (not just a reactive update)
+    if (bot !== currentBotName) {
+      console.log('[ChatScreen] Bot changed from', currentBotName, 'to', bot);
+      currentBotName = bot;
+      
+      if (!bot) {
+        messages = [];
+        lastRenderedIndex = -1;
+        firstMessage = '';
+        firstMessageLoading = false;
+        return;
+      }
+      
+      hydrateMessages(true).catch((error) => {
+        console.error('[ChatScreen] Failed to hydrate messages on bot change:', error);
+      });
+    }
+  });
 
   // Send message with role selection
   async function sendMessage() {
@@ -35,12 +133,7 @@
         const parseResult = await simulateUserInputFlow(inputText);
         lastParseResult = parseResult;
 
-        // Add processed user message only
-        messages.push({
-          role: 'user',
-          data: parseResult.processedInput,
-          time: Date.now()
-        });
+        await hydrateMessages();
 
         console.log('[ChatScreen] User input result:', parseResult);
 
@@ -52,12 +145,7 @@
         const parseResult = await simulateAIResponseFlow(inputText);
         lastParseResult = parseResult;
 
-        // Add processed AI response
-        messages.push({
-          role: 'char',
-          data: parseResult.displayText,
-          time: Date.now()
-        });
+        await hydrateMessages();
 
         console.log('[ChatScreen] AI response result:', parseResult);
       }
@@ -69,6 +157,7 @@
       messages.push({
         role: selectedRole,
         data: inputText,
+        displayText: inputText,
         time: Date.now()
       });
     } finally {
@@ -84,14 +173,39 @@
   }
 
   function clearMessages() {
+    clearCurrentChatMessages();
     messages = [];
     lastParseResult = null;
+    lastRenderedIndex = -1;
+  }
+
+  // Export refresh function for parent to trigger
+  export function refresh() {
+    console.log('[ChatScreen] refresh() called');
+    hydrateMessages(true);
   }
 </script>
 
 <div class="flex flex-col h-full">
   <!-- Chat messages area -->
   <div class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+    <!-- First message display -->
+    {#if firstMessage && editorState.selectedBot}
+      <div class="flex justify-start">
+        <div class="max-w-[80%] rounded-lg px-4 py-2 bg-white text-gray-800 border border-gray-200">
+          <div class="text-xs opacity-70 mb-1">
+            {editorState.botName || 'Assistant'}
+            {#if firstMessageLoading}
+              <span class="ml-1 text-blue-500">⏳</span>
+            {/if}
+          </div>
+          <div class="whitespace-pre-wrap text-sm">
+            {firstMessage}
+          </div>
+        </div>
+      </div>
+    {/if}
+
     {#if messages.length === 0}
       <div class="text-center text-gray-500 py-8">
         메시지를 입력하여 대화를 시작하세요!
@@ -109,7 +223,7 @@
             {message.role === 'user' ? (editorState.userName || 'User') : (editorState.botName || 'Assistant')}
           </div>
           <div class="whitespace-pre-wrap text-sm">
-            {message.data}
+            {message.displayText ?? message.data}
           </div>
           {#if message.time}
             <div class="text-xs opacity-50 mt-1">
@@ -144,7 +258,7 @@
               : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
           }"
         >
-          User (입력만)
+          User
         </button>
         <button
           onclick={() => selectedRole = 'char'}
@@ -164,7 +278,7 @@
       <textarea
         bind:value={messageInput}
         onkeydown={handleKeydown}
-        placeholder="{!editorState.selectedBot ? '먼저 봇을 선택하세요' : (selectedRole === 'user' ? '사용자 메시지를 입력하세요 (AI 응답 생성 없음)' : 'AI 응답을 입력하세요 (파싱 적용됨)')}"
+        placeholder="{!editorState.selectedBot ? '먼저 봇을 선택하세요' : '사용자 메시지 혹은 AI 응답을 입력하세요'}"
         class="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm transition-colors focus:border-blue-500 focus:outline-none resize-none"
         rows="2"
         disabled={isProcessing || !editorState.selectedBot}
@@ -191,6 +305,7 @@
         </button>
       </div>
     </div>
+    <div class="text-xs text-gray-500 my-[5px]">💡 Enter로 전송, Shift+Enter로 줄바꿈</div>
 
     <!-- Debug info -->
     {#if lastParseResult}
