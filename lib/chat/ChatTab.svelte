@@ -58,7 +58,7 @@
   <!-- 2-column layout: Chat on left, Bot settings on right -->
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_400px]">
     <!-- Left: Chat Screen -->
-    <div class="h-[700px] rounded-xl border border-gray-300 bg-white overflow-hidden">
+    <div class="h-[1000px] rounded-xl border border-gray-300 bg-white overflow-hidden">
       <ChatScreen bind:this={chatScreenRef} />
     </div>
 

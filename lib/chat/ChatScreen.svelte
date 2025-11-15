@@ -1,12 +1,16 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { editorState } from '../shared/editorState.svelte';
+  import Modal from '../UI/Modal.svelte';
+  import RisuAIoriginScreen from './RisuAIoriginScreen.svelte';
   import {
     simulateUserInputFlow,
     simulateAIResponseFlow,
     processDisplay,
     getCurrentChatData,
     clearCurrentChatMessages,
+    updateMessage,
+    deleteMessage,
     type ChatParseResult
   } from '../../ts/ChatParser';
   import type { Message } from '../../ts/mockDatabase';
@@ -20,6 +24,14 @@
   let lastRenderedIndex = -1;
   let firstMessage = $state('');
   let firstMessageLoading = $state(false);
+  
+  // Edit/Delete state
+  let editingIndex = $state<number | null>(null);
+  let editingText = $state('');
+  let showClearConfirm = $state(false);
+  
+  // Expand/Collapse state
+  let isExpanded = $state(false);
 
   // Chat parsing results for debugging
   let lastParseResult = $state<ChatParseResult | null>(null);
@@ -162,10 +174,57 @@
   }
 
   function clearMessages() {
+    showClearConfirm = true;
+  }
+
+  function confirmClear() {
     clearCurrentChatMessages();
     messages = [];
     lastParseResult = null;
     lastRenderedIndex = -1;
+    showClearConfirm = false;
+  }
+
+  function cancelClear() {
+    showClearConfirm = false;
+  }
+
+  // Edit message
+  function startEdit(index: number) {
+    editingIndex = index;
+    editingText = messages[index].data;
+  }
+
+  function cancelEdit() {
+    editingIndex = null;
+    editingText = '';
+  }
+
+  async function saveEdit() {
+    if (editingIndex === null || !editingText.trim()) return;
+
+    try {
+      await updateMessage(editingIndex, editingText.trim());
+      await hydrateMessages(true);
+      editingIndex = null;
+      editingText = '';
+    } catch (error) {
+      console.error('[ChatScreen] Failed to update message:', error);
+    }
+  }
+
+  // Delete message
+  async function executeDelete(index: number) {
+    try {
+      deleteMessage(index);
+      await hydrateMessages(true);
+      if (editingIndex === index) {
+        editingIndex = null;
+        editingText = '';
+      }
+    } catch (error) {
+      console.error('[ChatScreen] Failed to delete message:', error);
+    }
   }
 
   // Export refresh function for parent to trigger
@@ -174,20 +233,43 @@
   }
 </script>
 
-<div class="flex flex-col h-full">
-  <!-- Chat messages area -->
-  <div class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+{#if isExpanded}
+  <!-- Expanded View (RisuAI Original Screen) -->
+  <div class="fixed inset-0 z-50">
+    <RisuAIoriginScreen onCollapse={() => isExpanded = false} />
+  </div>
+{:else}
+  <!-- Normal View -->
+  <div class="flex flex-col h-full relative">
+    <!-- Expand button (top-right) -->
+    <button
+      onclick={() => isExpanded = true}
+      class="group absolute top-4 right-4 z-10 rounded-lg bg-blue-500 bg-opacity-50 p-2 shadow-md transition-all hover:bg-blue-450 hover:bg-opacity-80 hover:shadow-lg"
+      title="확장"
+    >
+      <svg 
+        class="h-5 w-5 opacity-60 transition-opacity group-hover:opacity-100" 
+        fill="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+      </svg>
+    </button>
+    
+    <!-- Chat messages area -->
+    <div class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 rounded-lg border-2 border-gray-300">
     <!-- First message display -->
     {#if firstMessage && editorState.selectedBot}
       <div class="flex justify-start">
-        <div class="max-w-[80%] rounded-lg px-4 py-2 bg-white text-gray-800 border border-gray-200">
-          <div class="text-xs opacity-70 mb-1">
-            {editorState.botName || 'Assistant'}
+        <div class="max-w-[80%] rounded-2xl rounded-tl-sm bg-white text-gray-800 border border-gray-200 px-4 py-2 shadow-sm">
+          <div class="mb-1 flex items-center gap-1 text-xs font-semibold opacity-70">
+            <span>🤖 {editorState.botName || 'Assistant'}</span>
+            <span class="rounded bg-amber-500 px-1.5 py-0.5 text-[10px] text-white">첫 메시지</span>
             {#if firstMessageLoading}
               <span class="ml-1 text-blue-500">⏳</span>
             {/if}
           </div>
-          <div class="whitespace-pre-wrap text-sm">
+          <div class="whitespace-pre-wrap break-words text-sm leading-relaxed">
             {firstMessage}
           </div>
         </div>
@@ -195,27 +277,81 @@
     {/if}
 
     {#if messages.length === 0}
-      <div class="text-center text-gray-500 py-8">
-        메시지를 입력하여 대화를 시작하세요!
+      <div class="flex items-center justify-center text-gray-400 py-[30px]">
+        <div class="text-center">
+          <div>메시지를 입력하여 대화를 시작하세요!</div>
+        </div>
       </div>
     {/if}
 
     {#each messages as message, i (i)}
       <div class="flex {message.role === 'user' ? 'justify-end' : 'justify-start'}">
-        <div class="max-w-[80%] rounded-lg px-4 py-2 {
+        <div class="max-w-[80%] rounded-2xl {
           message.role === 'user'
-            ? 'bg-blue-500 text-white'
-            : 'bg-white text-gray-800 border border-gray-200'
-        }">
-          <div class="text-xs opacity-70 mb-1">
-            {message.role === 'user' ? (editorState.userName || 'User') : (editorState.botName || 'Assistant')}
-          </div>
-          <div class="whitespace-pre-wrap text-sm">
-            {message.displayText ?? message.data}
-          </div>
-          {#if message.time}
-            <div class="text-xs opacity-50 mt-1">
-              {new Date(message.time).toLocaleTimeString()}
+            ? 'rounded-tr-sm bg-blue-500 text-white'
+            : 'rounded-tl-sm bg-white text-gray-800 border border-gray-200'
+        } px-4 py-2 shadow-sm">
+          {#if editingIndex === i}
+            <!-- 편집 모드 -->
+            <div class="flex flex-col gap-2">
+              <textarea
+                bind:value={editingText}
+                class="min-h-[60px] w-full resize-y rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-500 focus:outline-none"
+                onkeydown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    saveEdit();
+                  } else if (e.key === 'Escape') {
+                    cancelEdit();
+                  }
+                }}
+              ></textarea>
+              <div class="flex gap-2">
+                <button
+                  class="flex-1 rounded-md bg-green-500 px-3 py-1 text-xs font-semibold text-white hover:bg-green-600"
+                  onclick={saveEdit}
+                >
+                  ✓ 저장
+                </button>
+                <button
+                  class="flex-1 rounded-md bg-gray-400 px-3 py-1 text-xs font-semibold text-white hover:bg-gray-500"
+                  onclick={cancelEdit}
+                >
+                  × 취소
+                </button>
+                <button
+                  class="rounded-md bg-red-500 px-2 py-1 text-xs font-semibold text-white hover:bg-red-600"
+                  onclick={() => {
+                    executeDelete(i);
+                    cancelEdit();
+                  }}
+                  title="삭제"
+                >
+                  🗑️
+                </button>
+              </div>
+            </div>
+          {:else}
+            <!-- 일반 모드 -->
+            <div class="group relative">
+              <div class="mb-1 flex items-center gap-1 text-xs font-semibold opacity-70">
+                <span>{message.role === 'user' ? '👤 ' + (editorState.userName || 'User') : '🤖 ' + (editorState.botName || 'Assistant')}</span>
+                <button
+                  class="ml-1 rounded p-0.5 text-xs opacity-0 transition-all hover:bg-black/10 group-hover:opacity-100"
+                  onclick={() => startEdit(i)}
+                  title="수정"
+                >
+                  ✏️
+                </button>
+              </div>
+              <div class="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                {message.displayText ?? message.data}
+              </div>
+              {#if message.time}
+                <div class="text-xs opacity-50 mt-1">
+                  {new Date(message.time).toLocaleTimeString()}
+                </div>
+              {/if}
             </div>
           {/if}
         </div>
@@ -234,66 +370,46 @@
       </div>
     {/if}
 
-    <!-- Role selector -->
-    <div class="flex items-center gap-2 mb-3">
-      <span class="text-sm font-medium text-gray-700">역할:</span>
-      <div class="flex gap-1">
-        <button
-          onclick={() => selectedRole = 'user'}
-          class="px-3 py-1 rounded text-sm font-medium transition-colors {
-            selectedRole === 'user'
-              ? 'bg-blue-500 text-white'
-              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-          }"
-        >
-          User
-        </button>
-        <button
-          onclick={() => selectedRole = 'char'}
-          class="px-3 py-1 rounded text-sm font-medium transition-colors {
-            selectedRole === 'char'
-              ? 'bg-green-500 text-white'
-              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-          }"
-        >
-          AI 응답
-        </button>
-      </div>
-    </div>
-
     <!-- Message input -->
-    <div class="flex gap-2">
-      <textarea
-        bind:value={messageInput}
-        onkeydown={handleKeydown}
-        placeholder="{!editorState.selectedBot ? '먼저 봇을 선택하세요' : '사용자 메시지 혹은 AI 응답을 입력하세요'}"
-        class="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm transition-colors focus:border-blue-500 focus:outline-none resize-none"
-        rows="2"
-        disabled={isProcessing || !editorState.selectedBot}
-      ></textarea>
-
-      <div class="flex flex-col gap-2">
+    <div class="flex flex-col gap-2 rounded-lg border-2 border-gray-300 bg-white p-3 shadow-sm">
+      <div class="flex gap-2">
+        <select
+          bind:value={selectedRole}
+          class="rounded-lg border-2 border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition-all focus:border-blue-500 focus:outline-none"
+          disabled={isProcessing || !editorState.selectedBot}
+        >
+          <option value="user">👤 User</option>
+          <option value="char">🤖 AI 응답</option>
+        </select>
         <button
           onclick={sendMessage}
           disabled={!messageInput.trim() || isProcessing || !editorState.selectedBot}
-          class="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium transition-colors hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+          class="rounded-lg bg-blue-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {#if isProcessing}
             <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
           {:else}
-            전송
+            ➤ 전송
           {/if}
         </button>
-
         <button
           onclick={clearMessages}
-          class="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium transition-colors hover:bg-red-600"
+          class="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-600"
         >
           Clear
         </button>
       </div>
+      
+      <textarea
+        bind:value={messageInput}
+        onkeydown={handleKeydown}
+        placeholder="{!editorState.selectedBot ? '먼저 봇을 선택하세요' : '메시지를 입력하세요...'}"
+        class="min-h-[80px] w-full resize-y rounded-lg border-2 border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 placeholder-gray-400 transition-all focus:border-blue-500 focus:outline-none"
+        disabled={isProcessing || !editorState.selectedBot}
+      ></textarea>
+      
+      <div class="text-xs text-gray-500">💡 Enter로 전송, Shift+Enter로 줄바꿈</div>
     </div>
-    <div class="text-xs text-gray-500 my-[5px]">💡 Enter로 전송, Shift+Enter로 줄바꿈</div>
 
     <!-- Debug info -->
     {#if lastParseResult}
@@ -311,4 +427,20 @@
       </details>
     {/if}
   </div>
-</div>
+  </div>
+{/if}
+
+<!-- Clear Confirmation Modal -->
+<Modal
+  alertMode={true}
+  isOpen={showClearConfirm}
+  title="채팅 초기화"
+  alertMessage="초기화를 선택하면 모든 메시지를 삭제합니다. 계속하시겠습니까?"
+  alertType="warning"
+  showCancel={true}
+  confirmLabel="초기화"
+  cancelLabel="취소"
+  onConfirm={confirmClear}
+  onCancel={cancelClear}
+  onClose={cancelClear}
+/>

@@ -1,330 +1,128 @@
-// RisuAI Chat Parser - 원본 프로젝트 함수들을 사용하여 채팅 파싱 로직 구현
-// LLM API 호출은 제외하고 파싱 과정만 시뮬레이션
+// RisuAI Chat Parser - 원본 processScriptFull을 활용한 간결한 구현
 
 import { processScriptFull } from '../../src/ts/process/scripts';
 import { runTrigger } from '../../src/ts/process/triggers';
-import { runLuaEditTrigger } from '../../src/ts/process/scriptings';
-import { getCurrentChat, getCurrentCharacter, setCurrentChat, type Chat, type Message } from '../../src/ts/storage/database.svelte';
+import { risuChatParser } from '../../src/ts/parser.svelte';
+import { getCurrentChat, getCurrentCharacter, setCurrentChat } from '../../src/ts/storage/database.svelte';
+import { editorState, saveEditorState } from '../lib/shared/editorState.svelte';
 
-// 채팅 파싱 결과 인터페이스
-export interface ChatParseResult {
-  originalInput: string;
-  processedInput: string;
-  aiResponse: string;
-  processedResponse: string;
-  displayText: string;
-  triggersExecuted: string[];
-  scriptStates: {[key: string]: any};
-  storedMessage?: Message | null;
-  messageIndex?: number;
+// ============================================================================
+// CBS 변수 동기화 (chat.scriptstate ↔ editorState.customVars)
+// ============================================================================
+
+function syncScriptStateToEditor() {
+  try {
+    const chat = getCurrentChat();
+    if (!chat?.scriptstate) return;
+
+    for (const key in chat.scriptstate) {
+      if (key.startsWith('$')) {
+        editorState.customVars[key.substring(1)] = String(chat.scriptstate[key]);
+      }
+    }
+    saveEditorState();
+  } catch (error) {
+    console.error('[ChatParser] Sync error:', error);
+  }
 }
 
-interface AppendMessageResult {
-  message: Message;
-  index: number;
+function syncEditorToScriptState() {
+  try {
+    const chat = getCurrentChat();
+    if (!chat) return;
+
+    chat.scriptstate ??= {};
+    for (const key in editorState.customVars) {
+      chat.scriptstate['$' + key] = editorState.customVars[key];
+    }
+    setCurrentChat(chat);
+  } catch (error) {
+    console.error('[ChatParser] Sync error:', error);
+  }
 }
 
-function ensureCurrentChat(): Chat {
+// ============================================================================
+// 핵심 처리 함수 (processScriptFull 래퍼)
+// ============================================================================
+
+async function processWithSync(text: string, mode: 'editinput' | 'editoutput' | 'editdisplay', index = -1) {
+  const char = getCurrentCharacter();
+  if (!char) throw new Error('No character selected');
+
+  syncEditorToScriptState();
+  const result = await processScriptFull(char, text, mode, index, mode === 'editdisplay' ? { firstmsg: index === -1 } : {});
+  syncScriptStateToEditor();
+  
+  return result.data;
+}
+
+export const processUserInput = (text: string, index = -1) => processWithSync(text, 'editinput', index);
+export const processAIResponse = (text: string, index = -1) => processWithSync(text, 'editoutput', index);
+export const processDisplay = (text: string, index = -1) => processWithSync(text, 'editdisplay', index);
+
+// ============================================================================
+// 채팅 플로우 (ChatScreen에서 사용)
+// ============================================================================
+
+export async function simulateUserInputFlow(userInput: string) {
+  const char = getCurrentCharacter();
+  if (!char) throw new Error('No character selected');
+
+  // 1. CBS 변수 실행 (runVar: true)
+  const parsed = risuChatParser(userInput, { chara: char, runVar: true, chatID: -1, cbsConditions: {} });
+  
+  // 2. editinput 처리
+  const processed = await processUserInput(parsed);
+  
+  // 3. 메시지 저장
   const chat = getCurrentChat();
-  if (!chat) {
-    throw new Error('No active chat');
-  }
-  if (!Array.isArray(chat.message)) {
-    chat.message = [];
-  }
-  return chat;
-}
-
-function appendMessageToChat(role: Message['role'], data: string): AppendMessageResult {
-  const chat = ensureCurrentChat();
-  const newMessage: Message = {
-    role,
-    data,
-    time: Date.now()
-  };
-
-  chat.message.push(newMessage);
+  if (!chat) throw new Error('No active chat');
+  
+  chat.message ??= [];
+  chat.message.push({ role: 'user', data: processed, time: Date.now() });
   setCurrentChat(chat);
 
-  return {
-    message: newMessage,
-    index: chat.message.length - 1
-  };
+  // 4. Start 트리거
+  if (char.type !== 'group') {
+    await runTrigger(char, 'start', { chat });
+  }
+
+  return { processedInput: processed, messageIndex: chat.message.length - 1 };
 }
 
-/**
- * 사용자 입력을 처리합니다 (editinput 단계)
- */
-export async function processUserInput(userInput: string): Promise<string> {
-  const currentChar = getCurrentCharacter();
-  if (!currentChar) {
-    throw new Error('No character selected');
+export async function simulateAIResponseFlow(aiResponse: string) {
+  const char = getCurrentCharacter();
+  if (!char) throw new Error('No character selected');
+
+  // 1. CBS 변수 실행
+  const parsed = risuChatParser(aiResponse, { chara: char, runVar: true, chatID: -1, cbsConditions: {} });
+  
+  // 2. editoutput 처리
+  const processed = await processAIResponse(parsed);
+  
+  // 3. 메시지 저장
+  const chat = getCurrentChat();
+  if (!chat) throw new Error('No active chat');
+  
+  chat.message ??= [];
+  chat.message.push({ role: 'char', data: processed, time: Date.now() });
+  setCurrentChat(chat);
+
+  // 4. Output 트리거
+  if (char.type !== 'group') {
+    await runTrigger(char, 'output', { chat });
   }
 
-  // 타임아웃으로 무한 루프 방지 (5초)
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error('processUserInput timeout')), 5000);
-  });
-
-  try {
-    const result = await Promise.race([
-      (async () => {
-        // 1. Lua Edit Trigger (editinput)
-        let processedInput = await runLuaEditTrigger(currentChar, 'editinput', userInput);
-
-        // 2. Regex Script (editinput)
-        const scriptResult = await processScriptFull(currentChar, processedInput, 'editinput');
-        processedInput = scriptResult.data;
-
-        return processedInput;
-      })(),
-      timeoutPromise
-    ]);
-
-    return result;
-  } catch (error) {
-    console.error('[ChatParser] Error in processUserInput:', error);
-    return userInput; // 에러 시 원본 입력 반환
-  }
+  return { processedResponse: processed, messageIndex: chat.message.length - 1 };
 }
 
-/**
- * AI 응답을 처리합니다 (editoutput 단계)
- */
-export async function processAIResponse(aiResponse: string, messageIndex: number = -1): Promise<string> {
-  const currentChar = getCurrentCharacter();
-  if (!currentChar) {
-    throw new Error('No character selected');
-  }
+// ============================================================================
+// 유틸리티
+// ============================================================================
 
-  // 타임아웃으로 무한 루프 방지 (3초)
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error('processAIResponse timeout')), 3000);
-  });
-
-  try {
-    const result = await Promise.race([
-      (async () => {
-        // 1. Lua Edit Trigger (editoutput)
-        let processedResponse = await runLuaEditTrigger(currentChar, 'editoutput', aiResponse, { index: messageIndex });
-
-        // 2. Regex Script (editoutput)
-        const scriptResult = await processScriptFull(currentChar, processedResponse, 'editoutput', messageIndex);
-        processedResponse = scriptResult.data;
-
-        return processedResponse;
-      })(),
-      timeoutPromise
-    ]);
-
-    return result;
-  } catch (error) {
-    console.error('[ChatParser] Error in processAIResponse:', error);
-    return aiResponse; // 에러 시 원본 응답 반환
-  }
-}
-
-/**
- * 채팅 표시를 처리합니다 (editdisplay 단계)
- */
-export async function processDisplay(displayText: string, messageIndex: number = -1): Promise<string> {
-  const currentChar = getCurrentCharacter();
-  if (!currentChar) {
-    throw new Error('No character selected');
-  }
-
-  // 타임아웃으로 무한 루프 방지 (3초)
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error('processDisplay timeout')), 3000);
-  });
-
-  try {
-    const result = await Promise.race([
-      (async () => {
-        // 1. Lua Edit Trigger (editdisplay)
-        let processedDisplay = await runLuaEditTrigger(currentChar, 'editdisplay', displayText, { index: messageIndex });
-
-        // 2. Regex Script (editdisplay)
-        const scriptResult = await processScriptFull(currentChar, processedDisplay, 'editdisplay', messageIndex);
-        processedDisplay = scriptResult.data;
-
-        // 3. Display Trigger 실행 (character 타입일 때만)
-        const currentChat = getCurrentChat();
-        if (currentChat && currentChar.type !== 'group') {
-          const triggerResult = await runTrigger(currentChar, 'display', {
-            chat: currentChat,
-            displayMode: true,
-            displayData: processedDisplay
-          });
-          processedDisplay = triggerResult?.displayData ?? processedDisplay;
-        }
-
-        return processedDisplay;
-      })(),
-      timeoutPromise
-    ]);
-
-    return result;
-  } catch (error) {
-    console.error('[ChatParser] Error in processDisplay:', error);
-    return displayText; // 에러 시 원본 텍스트 반환
-  }
-}
-
-/**
- * 채팅 트리거들을 실행합니다
- */
-export async function runChatTriggers(triggerType: 'start' | 'output' | 'input' | 'manual', extraData?: any): Promise<any> {
-  const currentChar = getCurrentCharacter();
-  const currentChat = getCurrentChat();
-
-  if (!currentChar || !currentChat) {
-    throw new Error('No character or chat available');
-  }
-
-  // Group chat에서는 트리거 실행하지 않음
-  if (currentChar.type === 'group') {
-    return null;
-  }
-
-  const triggerData = {
-    chat: currentChat,
-    ...extraData
-  };
-
-  // 타임아웃으로 무한 루프 방지 (5초)
-  const timeoutPromise = new Promise((_, reject) => {
-    setTimeout(() => reject(new Error(`Trigger timeout: ${triggerType}`)), 5000);
-  });
-
-  try {
-    const result = await Promise.race([
-      runTrigger(currentChar, triggerType, triggerData),
-      timeoutPromise
-    ]);
-    return result;
-  } catch (error) {
-    console.error(`[ChatParser] Error running ${triggerType} triggers:`, error);
-    return null;
-  }
-}
-
-/**
- * 모의 AI 응답을 생성합니다 (실제 LLM API 호출 없이)
- * AI 응답 자동 생성 비활성화 - 빈 문자열 반환
- */
-export function generateMockAIResponse(): string {
-  return '';
-}
-
-/**
- * 사용자 입력만 처리하는 채팅 플로우 (AI 응답 생성 없음)
- */
-export async function simulateUserInputFlow(userInput: string): Promise<ChatParseResult> {
-  const result: ChatParseResult = {
-    originalInput: userInput,
-    processedInput: '',
-    aiResponse: '',
-    processedResponse: '',
-    displayText: '',
-    triggersExecuted: [],
-    scriptStates: {},
-    storedMessage: null,
-    messageIndex: undefined
-  };
-
-  try {
-    // 1. 사용자 입력 처리
-    result.processedInput = await processUserInput(userInput);
-    result.triggersExecuted.push('editinput');
-
-    // 2. 현재 채팅에 메시지 저장 (editinput 결과만 저장)
-    const { message, index } = appendMessageToChat('user', result.processedInput);
-    result.storedMessage = message;
-    result.messageIndex = index;
-
-    // 3. Start 트리거 실행 (저장된 메시지를 기반으로 동작)
-    const startTriggerResult = await runChatTriggers('start');
-    result.triggersExecuted.push('start');
-    if (startTriggerResult?.stopSending) {
-      return result;
-    }
-
-    // AI 응답은 생성하지 않음
-    result.aiResponse = '';
-    result.processedResponse = '';
-    result.displayText = result.processedInput;
-
-    // 4. 현재 채팅의 scriptstate 저장
-    const currentChat = getCurrentChat();
-    if (currentChat?.scriptstate) {
-      result.scriptStates = { ...currentChat.scriptstate };
-    }
-
-  } catch (error) {
-    console.error('[ChatParser] Error in user input flow:', error);
-    throw error;
-  }
-
-  return result;
-}
-
-/**
- * AI 응답을 처리하는 채팅 플로우 (Output 트리거 + Display 처리)
- */
-export async function simulateAIResponseFlow(aiResponse: string): Promise<ChatParseResult> {
-  const result: ChatParseResult = {
-    originalInput: '',
-    processedInput: '',
-    aiResponse: aiResponse,
-    processedResponse: '',
-    displayText: '',
-    triggersExecuted: [],
-    scriptStates: {},
-    storedMessage: null,
-    messageIndex: undefined
-  };
-
-  try {
-    // 1. AI 응답 처리
-    result.processedResponse = await processAIResponse(result.aiResponse);
-    result.triggersExecuted.push('editoutput');
-
-    // 2. 현재 채팅에 메시지 저장 (editoutput 결과만 저장)
-    const { message, index } = appendMessageToChat('char', result.processedResponse);
-    result.storedMessage = message;
-    result.messageIndex = index;
-
-    // 3. Output 트리거 실행
-    await runChatTriggers('output');
-    result.triggersExecuted.push('output');
-
-    // Display stage는 ChatScreen에서 ChatData 기반으로 실행
-    result.displayText = result.processedResponse;
-
-    // 4. 현재 채팅의 scriptstate 저장
-    const currentChat = getCurrentChat();
-    if (currentChat?.scriptstate) {
-      result.scriptStates = { ...currentChat.scriptstate };
-    }
-
-  } catch (error) {
-    console.error('[ChatParser] Error in AI response flow:', error);
-    throw error;
-  }
-
-  return result;
-}
-
-
-
-/**
- * 현재 캐릭터의 채팅 데이터를 가져옵니다
- */
-export function getCurrentChatData(): { character: any; chat: Chat | null; messages: Message[]; firstMessage: string } {
+export function getCurrentChatData() {
   const character = getCurrentCharacter();
   const chat = getCurrentChat();
-
   return {
     character,
     chat,
@@ -333,27 +131,27 @@ export function getCurrentChatData(): { character: any; chat: Chat | null; messa
   };
 }
 
-/**
- * 채팅 데이터를 콘솔에 로깅합니다 (디버깅용)
- */
-export function logChatData(label: string = 'Chat Data') {
-  const data = getCurrentChatData();
-  console.log(`[${label}] Character:`, data.character?.name);
-  console.log(`[${label}] Chat:`, data.chat?.name);
-  console.log(`[${label}] Messages:`, data.messages.length);
-  console.log(`[${label}] Script State:`, data.chat?.scriptstate);
-}
-
 export function clearCurrentChatMessages() {
-  try {
-    const chat = getCurrentChat();
-    if (!chat) {
-      return;
-    }
+  const chat = getCurrentChat();
+  if (chat) {
     chat.message = [];
     setCurrentChat(chat);
-    console.log('[ChatParser] Cleared current chat messages');
-  } catch (error) {
-    console.error('[ChatParser] Failed to clear chat messages:', error);
   }
+}
+
+export function updateMessage(index: number, newData: string) {
+  const chat = getCurrentChat();
+  if (!chat || !chat.message[index]) throw new Error('Invalid message index');
+  
+  chat.message[index].data = newData;
+  chat.message[index].time = Date.now();
+  setCurrentChat(chat);
+}
+
+export function deleteMessage(index: number) {
+  const chat = getCurrentChat();
+  if (!chat || !chat.message[index]) throw new Error('Invalid message index');
+  
+  chat.message.splice(index, 1);
+  setCurrentChat(chat);
 }
