@@ -61,8 +61,6 @@ export async function processUserInput(userInput: string): Promise<string> {
     throw new Error('No character selected');
   }
 
-  console.log('[ChatParser] Processing user input:', userInput);
-
   // 타임아웃으로 무한 루프 방지 (5초)
   const timeoutPromise = new Promise<never>((_, reject) => {
     setTimeout(() => reject(new Error('processUserInput timeout')), 5000);
@@ -73,12 +71,10 @@ export async function processUserInput(userInput: string): Promise<string> {
       (async () => {
         // 1. Lua Edit Trigger (editinput)
         let processedInput = await runLuaEditTrigger(currentChar, 'editinput', userInput);
-        console.log('[ChatParser] After Lua editinput:', processedInput);
 
         // 2. Regex Script (editinput)
         const scriptResult = await processScriptFull(currentChar, processedInput, 'editinput');
         processedInput = scriptResult.data;
-        console.log('[ChatParser] After regex editinput:', processedInput);
 
         return processedInput;
       })(),
@@ -101,8 +97,6 @@ export async function processAIResponse(aiResponse: string, messageIndex: number
     throw new Error('No character selected');
   }
 
-  console.log('[ChatParser] Processing AI response:', aiResponse);
-
   // 타임아웃으로 무한 루프 방지 (3초)
   const timeoutPromise = new Promise<never>((_, reject) => {
     setTimeout(() => reject(new Error('processAIResponse timeout')), 3000);
@@ -113,12 +107,10 @@ export async function processAIResponse(aiResponse: string, messageIndex: number
       (async () => {
         // 1. Lua Edit Trigger (editoutput)
         let processedResponse = await runLuaEditTrigger(currentChar, 'editoutput', aiResponse, { index: messageIndex });
-        console.log('[ChatParser] After Lua editoutput:', processedResponse);
 
         // 2. Regex Script (editoutput)
         const scriptResult = await processScriptFull(currentChar, processedResponse, 'editoutput', messageIndex);
         processedResponse = scriptResult.data;
-        console.log('[ChatParser] After regex editoutput:', processedResponse);
 
         return processedResponse;
       })(),
@@ -141,8 +133,6 @@ export async function processDisplay(displayText: string, messageIndex: number =
     throw new Error('No character selected');
   }
 
-  console.log('[ChatParser] Processing display:', displayText);
-
   // 타임아웃으로 무한 루프 방지 (3초)
   const timeoutPromise = new Promise<never>((_, reject) => {
     setTimeout(() => reject(new Error('processDisplay timeout')), 3000);
@@ -153,12 +143,10 @@ export async function processDisplay(displayText: string, messageIndex: number =
       (async () => {
         // 1. Lua Edit Trigger (editdisplay)
         let processedDisplay = await runLuaEditTrigger(currentChar, 'editdisplay', displayText, { index: messageIndex });
-        console.log('[ChatParser] After Lua editdisplay:', processedDisplay);
 
         // 2. Regex Script (editdisplay)
         const scriptResult = await processScriptFull(currentChar, processedDisplay, 'editdisplay', messageIndex);
         processedDisplay = scriptResult.data;
-        console.log('[ChatParser] After regex editdisplay:', processedDisplay);
 
         // 3. Display Trigger 실행 (character 타입일 때만)
         const currentChat = getCurrentChat();
@@ -169,7 +157,6 @@ export async function processDisplay(displayText: string, messageIndex: number =
             displayData: processedDisplay
           });
           processedDisplay = triggerResult?.displayData ?? processedDisplay;
-          console.log('[ChatParser] After display trigger:', processedDisplay);
         }
 
         return processedDisplay;
@@ -197,11 +184,8 @@ export async function runChatTriggers(triggerType: 'start' | 'output' | 'input' 
 
   // Group chat에서는 트리거 실행하지 않음
   if (currentChar.type === 'group') {
-    console.log(`[ChatParser] Skipping ${triggerType} triggers for group chat`);
     return null;
   }
-
-  console.log(`[ChatParser] Running ${triggerType} triggers`);
 
   const triggerData = {
     chat: currentChat,
@@ -218,7 +202,6 @@ export async function runChatTriggers(triggerType: 'start' | 'output' | 'input' 
       runTrigger(currentChar, triggerType, triggerData),
       timeoutPromise
     ]);
-    console.log(`[ChatParser] ${triggerType} trigger result:`, result);
     return result;
   } catch (error) {
     console.error(`[ChatParser] Error running ${triggerType} triggers:`, error);
@@ -251,8 +234,6 @@ export async function simulateUserInputFlow(userInput: string): Promise<ChatPars
   };
 
   try {
-    console.log('[ChatParser] === Starting User Input Flow ===');
-
     // 1. 사용자 입력 처리
     result.processedInput = await processUserInput(userInput);
     result.triggersExecuted.push('editinput');
@@ -263,11 +244,9 @@ export async function simulateUserInputFlow(userInput: string): Promise<ChatPars
     result.messageIndex = index;
 
     // 3. Start 트리거 실행 (저장된 메시지를 기반으로 동작)
-    console.log('[ChatParser] Running start triggers...');
     const startTriggerResult = await runChatTriggers('start');
     result.triggersExecuted.push('start');
     if (startTriggerResult?.stopSending) {
-      console.log('[ChatParser] Start trigger stopped sending');
       return result;
     }
 
@@ -281,9 +260,6 @@ export async function simulateUserInputFlow(userInput: string): Promise<ChatPars
     if (currentChat?.scriptstate) {
       result.scriptStates = { ...currentChat.scriptstate };
     }
-
-    console.log('[ChatParser] === User Input Flow Complete ===');
-    console.log('[ChatParser] Result:', result);
 
   } catch (error) {
     console.error('[ChatParser] Error in user input flow:', error);
@@ -310,10 +286,7 @@ export async function simulateAIResponseFlow(aiResponse: string): Promise<ChatPa
   };
 
   try {
-    console.log('[ChatParser] === Starting AI Response Flow ===');
-
     // 1. AI 응답 처리
-    console.log('[ChatParser] Processing AI response...');
     result.processedResponse = await processAIResponse(result.aiResponse);
     result.triggersExecuted.push('editoutput');
 
@@ -323,7 +296,6 @@ export async function simulateAIResponseFlow(aiResponse: string): Promise<ChatPa
     result.messageIndex = index;
 
     // 3. Output 트리거 실행
-    console.log('[ChatParser] Running output triggers...');
     await runChatTriggers('output');
     result.triggersExecuted.push('output');
 
@@ -335,9 +307,6 @@ export async function simulateAIResponseFlow(aiResponse: string): Promise<ChatPa
     if (currentChat?.scriptstate) {
       result.scriptStates = { ...currentChat.scriptstate };
     }
-
-    console.log('[ChatParser] === AI Response Flow Complete ===');
-    console.log('[ChatParser] Result:', result);
 
   } catch (error) {
     console.error('[ChatParser] Error in AI response flow:', error);

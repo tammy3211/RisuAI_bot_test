@@ -29,26 +29,26 @@ let _mockDatabase: Partial<Database> = {
 export function setRuntimeUserName(name: string) {
   _runtimeUserName = name;
   _mockDatabase.username = name;
-  console.log('[platform-shim] setRuntimeUserName:', name);
+  //console.log('[platform-shim] setRuntimeUserName:', name);
 }
 
 export function setRuntimePersonaPrompt(prompt: string) {
   _runtimePersonaPrompt = prompt;
   _mockDatabase.personaPrompt = prompt;
-  console.log('[platform-shim] setRuntimePersonaPrompt:', prompt);
+  //console.log('[platform-shim] setRuntimePersonaPrompt:', prompt);
 }
 
 export function setRuntimeBotName(name: string) {
   if (_mockDatabase.characters?.[0]) {
     _mockDatabase.characters[0].name = name;
-    console.log('[platform-shim] setRuntimeBotName:', name);
+    //console.log('[platform-shim] setRuntimeBotName:', name);
   }
 }
 
 export function setRuntimeBotDescription(desc: string) {
   if (_mockDatabase.characters?.[0]) {
     (_mockDatabase.characters[0] as any).firstMessage = desc;
-    console.log('[platform-shim] setRuntimeBotDescription:', desc);
+    //console.log('[platform-shim] setRuntimeBotDescription:', desc);
   }
 }
 
@@ -63,29 +63,29 @@ export function setRuntimeChatVars(vars: {[key: string]: string}) {
     }
   }
   
-  console.log('[platform-shim] setRuntimeChatVars:', _chatVariables);
-  console.log('[platform-shim] scriptstate:', _mockDatabase.characters?.[0]?.chats?.[0]?.scriptstate);
+  //console.log('[platform-shim] setRuntimeChatVars:', _chatVariables);
+  //console.log('[platform-shim] scriptstate:', _mockDatabase.characters?.[0]?.chats?.[0]?.scriptstate);
 }
 
 export function getUserName(): string {
-  console.log('[platform-shim] getUserName called, returning:', _runtimeUserName);
+  //console.log('[platform-shim] getUserName called, returning:', _runtimeUserName);
   return _runtimeUserName;
 }
 
 export function getPersonaPrompt(): string {
-  console.log('[platform-shim] getPersonaPrompt called, returning:', _runtimePersonaPrompt);
+  //console.log('[platform-shim] getPersonaPrompt called, returning:', _runtimePersonaPrompt);
   return _runtimePersonaPrompt;
 }
 
 export function getChatVar(key: string): string {
   const value = _chatVariables[key];
-  console.log('[platform-shim] getChatVar called for key:', key, 'returning:', value ?? 'null');
+  //console.log('[platform-shim] getChatVar called for key:', key, 'returning:', value ?? 'null');
   return value ?? 'null';
 }
 
 export function setChatVar(key: string, value: string) {
   _chatVariables[key] = value;
-  console.log('[platform-shim] setChatVar called:', key, '=', value);
+  //console.log('[platform-shim] setChatVar called:', key, '=', value);
 }
 
 export function getGlobalChatVar(key: string): string {
@@ -94,7 +94,7 @@ export function getGlobalChatVar(key: string): string {
 }
 
 export function getDatabase(): Database {
-  console.log('[platform-shim] getDatabase called, returning username:', _mockDatabase.username, 'personaPrompt:', _mockDatabase.personaPrompt);
+  //console.log('[platform-shim] getDatabase called, returning username:', _mockDatabase.username, 'personaPrompt:', _mockDatabase.personaPrompt);
   return _mockDatabase as Database;
 }
 

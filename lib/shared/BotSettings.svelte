@@ -22,12 +22,7 @@
     const key = newVarName.trim();
     if (!key) return;
     
-    console.log('Checking key:', key);
-    console.log('Current vars:', editorState.customVars);
-    console.log('Has key?:', key in editorState.customVars);
-    
     if (key in editorState.customVars) {
-      console.log('Duplicate detected!');
       showDuplicateError = true;
       return;
     }

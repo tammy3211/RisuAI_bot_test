@@ -93,7 +93,6 @@
     
     // Only re-hydrate if the bot actually changed (not just a reactive update)
     if (bot !== currentBotName) {
-      console.log('[ChatScreen] Bot changed from', currentBotName, 'to', bot);
       currentBotName = bot;
       
       if (!bot) {
@@ -127,27 +126,17 @@
     try {
       if (selectedRole === 'user') {
         // User message flow - 입력만 처리, AI 응답 생성 없음
-        console.log('[ChatScreen] Processing user message:', inputText);
-
-        // Use ChatParser for user input processing only
         const parseResult = await simulateUserInputFlow(inputText);
         lastParseResult = parseResult;
 
         await hydrateMessages();
 
-        console.log('[ChatScreen] User input result:', parseResult);
-
       } else {
         // Assistant message flow - AI 응답으로 처리
-        console.log('[ChatScreen] Processing assistant message as AI response:', inputText);
-
-        // Use ChatParser for AI response processing
         const parseResult = await simulateAIResponseFlow(inputText);
         lastParseResult = parseResult;
 
         await hydrateMessages();
-
-        console.log('[ChatScreen] AI response result:', parseResult);
       }
 
     } catch (error) {
@@ -181,7 +170,6 @@
 
   // Export refresh function for parent to trigger
   export function refresh() {
-    console.log('[ChatScreen] refresh() called');
     hydrateMessages(true);
   }
 </script>

@@ -11,12 +11,10 @@
   
   // 초기 로드 (한 번만 실행)
   onMount(async () => {
-    console.log('[BotSourceSelector] onMount - Loading bots...');
     await loadAllBots();
 
     // 저장된 봇이 선택되어 있으면 자동으로 로드
     if (editorState.botSource === 'saved' && editorState.selectedBot) {
-      console.log('[BotSourceSelector] Loading saved bot:', editorState.selectedBot);
       await loadSelectedBotData();
       if (onLoadBot) {
         onLoadBot();

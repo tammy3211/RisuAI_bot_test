@@ -86,9 +86,6 @@ export async function loadNestedMarkdownFiles(
       import: 'default' 
     });
     
-    console.log(`[botLoader] Looking for files in /save/${botName}/${baseFolder}/`);
-    console.log(`[botLoader] Total glob matches:`, Object.keys(modules).length);
-    
     for (const path in modules) {
       // Check if this path matches the pattern for current bot
       if (!path.includes(`/save/${botName}/`)) {
@@ -102,8 +99,6 @@ export async function loadNestedMarkdownFiles(
       
       if (match) {
         const relativePath = match[1]; // e.g., "world_setting.md" or "folder/character_v.md"
-        
-        console.log(`[botLoader] Found file: ${path} -> ${relativePath}`);
         
         try {
           const loader = modules[path] as () => Promise<string>;
@@ -123,16 +118,11 @@ export async function loadNestedMarkdownFiles(
           if (fileName && !fileMap.has(fileName)) {
             fileMap.set(fileName, content);
           }
-          
-          console.log(`[botLoader] ✅ Stored as: ${keyWithoutExt}, ${relativePath}, ${fileName}`);
         } catch (error) {
           console.warn(`[botLoader] Failed to load file: ${path}`, error);
         }
       }
     }
-    
-    console.log(`[botLoader] Loaded ${fileMap.size} files from ${baseFolder}/ for ${botName}`);
-    console.log(`[botLoader] Available keys:`, Array.from(fileMap.keys()));
   } catch (error) {
     console.error(`Failed to load nested markdown files for ${botName}:`, error);
   }
@@ -163,7 +153,6 @@ export async function loadBotRegexScripts(
     
     // Load all MD files from regex/out/ directory
     const outFiles = await loadNestedMarkdownFiles(botName, 'regex/out');
-    console.log(`[botLoader] Loaded regex outFiles for ${botName}:`, Array.from(outFiles.keys()));
     
     // Resolve out content from files
     const resolvedScripts = await Promise.all(data.map(async (script: any, idx: number) => {
@@ -179,12 +168,10 @@ export async function loadBotRegexScripts(
       }
       
       // Find matching MD file in out map
-      console.log(`[botLoader] Looking for regex outFile: "${outFile}", has: ${outFiles.has(outFile)}`);
       if (outFiles.has(outFile)) {
         out = outFiles.get(outFile) ?? '';
-        console.log(`[botLoader] Loaded content for ${outFile}:`, out.substring(0, 50));
       } else if (!out) {
-        console.warn(`[botLoader] Regex output file not found in out/: ${outFile}`);
+        console.warn(`[botLoader] Regex output file not found: ${outFile}`);
       }
       
       return {
@@ -198,7 +185,6 @@ export async function loadBotRegexScripts(
       };
     }));
     
-    console.log(`[botLoader] Loaded ${resolvedScripts.length} regex scripts for ${botName}`);
     return resolvedScripts;
   } catch (error) {
     console.warn(`[botLoader] Failed to load regex scripts for ${botName}:`, error);
@@ -239,7 +225,6 @@ export async function loadBotTriggerScript(botName: string): Promise<any[]> {
     }
     
     const luaCode = await response.text();
-    console.log(`[botLoader] Loaded Lua script for ${botName}:`, luaCode.substring(0, 100));
     
     // Create triggerscript format
     return [{
@@ -325,13 +310,6 @@ export async function loadBotAssets(
       }
     }
     
-    console.log(`[botLoader] Loaded assets for ${botName}:`, {
-      emotions: emotionImages.length,
-      additional: additionalAssets.length,
-      cc: ccAssets.length,
-      hasMain: !!mainImage
-    });
-    
     return {
       emotionImages,
       additionalAssets,
@@ -366,24 +344,18 @@ export async function loadBotLorebook(botName: string): Promise<LorebookEntry[]>
     // Build a map of all MD files in content/ directory
     const contentFiles = await loadNestedMarkdownFiles(botName, 'lorebook/content');
     
-    console.log('[lorebookLoader] Available MD files:', Array.from(contentFiles.keys()));
-    
     // Load MD content for each lorebook entry
     for (const entry of lorebooks) {
       const match = entry.content?.match(/^\{(.+?)\}$/);
       if (match) {
         const mdFileName = match[1];
         
-        console.log(`[lorebookLoader] Looking for: ${mdFileName}`);
-        
         // Find matching MD file in content map
         if (contentFiles.has(mdFileName)) {
           entry.mdContent = contentFiles.get(mdFileName);
           entry.mdFile = mdFileName;
-          console.log(`[lorebookLoader] ✅ Loaded: ${mdFileName}`);
         } else {
-          console.warn(`[lorebookLoader] ❌ MD file not found: ${mdFileName}`);
-          console.warn(`[lorebookLoader] Available keys:`, Array.from(contentFiles.keys()));
+          console.warn(`[lorebookLoader] MD file not found: ${mdFileName}`);
           entry.mdContent = '';
           entry.mdFile = mdFileName;
         }
@@ -395,6 +367,27 @@ export async function loadBotLorebook(botName: string): Promise<LorebookEntry[]>
     console.error(`Failed to load lorebook for ${botName}:`, error);
     return [];
   }
+}
+
+// Load backgroundDOM
+
+export async function loadBotBackgroundHTML(botName: string): Promise<string> {
+  try {
+    const backgroundDOMPath = `/save/${botName}/triggerscript/backgroundDOM.md`;
+    const response = await fetch(backgroundDOMPath + '?t=' + Date.now());
+
+    if (!response.ok) {
+      console.warn(`No backgroundDOM found for bot: ${botName}`);
+      return '';
+    }
+
+    const backgroundDOM: string = await response.text();
+    return backgroundDOM;
+  } catch (error) {
+    console.error(`Failed to load backgroundDOM for ${botName}:`, error);
+    return '';
+  }
+
 }
 
 // 현재 선택된 봇의 모든 데이터를 로드하고 mock character 객체를 반환
@@ -410,20 +403,22 @@ export async function loadSelectedBotData() {
       additionalAssets: [],
       ccAssets: [],
       image: '',
-      triggerscript: []
+      triggerscript: [],
+      backgroundHTML: ''
     };
   }
   
   const botName = editorState.selectedBot;
   
   // Load all bot data in parallel
-  const [description, regexScripts, lorebooks, firstMessage, assets, triggerScript] = await Promise.all([
+  const [description, regexScripts, lorebooks, firstMessage, assets, triggerScript, backgroundHTML] = await Promise.all([
     loadBotDescription(botName),
     loadBotRegexScripts(botName),
     loadBotLorebook(botName),
     loadBotFirstMes(botName),
     loadBotAssets(botName),
-    loadBotTriggerScript(botName)
+    loadBotTriggerScript(botName),
+    loadBotBackgroundHTML(botName)
   ]);
   
   // Update editorState
@@ -443,7 +438,8 @@ export async function loadSelectedBotData() {
     additionalAssets: assets.additionalAssets,
     ccAssets: assets.ccAssets,
     image: assets.mainImage,
-    triggerscript: triggerScript
+    triggerscript: triggerScript,
+    backgroundHTML: backgroundHTML
   };
   
   try {
@@ -467,7 +463,8 @@ export async function loadSelectedBotData() {
     additionalAssets: assets.additionalAssets,
     ccAssets: assets.ccAssets,
     image: assets.mainImage,
-    triggerscript: triggerScript
+    triggerscript: triggerScript,
+    backgroundHTML: backgroundHTML
   };
 }
 

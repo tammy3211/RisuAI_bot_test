@@ -8,17 +8,10 @@
   let chatScreenRef: any;
 
   async function handleLoadBot() {
-    // Reload bot data after selecting a saved bot
-    console.log('[ChatTab] Loading bot data...');
-
     if (editorState.botSource === 'saved' && editorState.selectedBot) {
       await loadSelectedBotData();
 
-      console.log('[ChatTab] Bot data loaded:', {
-        bot: editorState.selectedBot,
-        regexCount: editorState.regexScripts?.length || 0,
-        lorebookCount: editorState.lorebookEntries?.length || 0
-      });
+      console.log('[ChatTab] Bot loaded:', editorState.selectedBot);
 
       // Refresh ChatScreen to show first message
       if (chatScreenRef?.refresh) {
@@ -30,7 +23,6 @@
   // Load bot data on mount if already selected (e.g., after page refresh)
   onMount(() => {
     if (editorState.botSource === 'saved' && editorState.selectedBot) {
-      console.log('[ChatTab] onMount - Loading saved bot:', editorState.selectedBot);
       handleLoadBot();
     }
   });

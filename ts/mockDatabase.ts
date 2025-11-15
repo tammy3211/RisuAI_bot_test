@@ -65,6 +65,7 @@ export interface BotData {
   image: string;
   triggerscript: any[];
   chats?: Chat[];  // 채팅 데이터 추가
+  backgroundHTML?:string;
 }
 
 let storeSetupPromise: Promise<void> | null = null;
@@ -200,6 +201,7 @@ export function getMockCharacter() {
     },
     replaceGlobalNote: '',
     loreSettings: null,
+    backgroundHTML: ''
   } as any;
 }
 
@@ -348,6 +350,7 @@ export async function prepareMockCharacter(botData: BotData) {
     mockChar.ccAssets = botData.ccAssets as any;
     mockChar.image = botData.image || '';
     mockChar.triggerscript = botData.triggerscript as any;
+    mockChar.backgroundHTML = botData.backgroundHTML || '';
     
     // Apply chats data if provided
     if (botData.chats && botData.chats.length > 0) {
@@ -389,6 +392,7 @@ export async function prepareMockCharacter(botData: BotData) {
     fallbackChar.ccAssets = botData.ccAssets as any;
     fallbackChar.image = botData.image || '';
     fallbackChar.triggerscript = botData.triggerscript as any;
+    fallbackChar.backgroundHTML = botData.backgroundHTML || '';
     
     // Apply chats data if provided
     if (botData.chats && botData.chats.length > 0) {

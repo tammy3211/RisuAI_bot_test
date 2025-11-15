@@ -14,11 +14,8 @@ function loadFromStorage() {
   
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    console.log('[editorState] Loading from localStorage:', saved);
     if (saved) {
-      const parsed = JSON.parse(saved);
-      console.log('[editorState] Loaded data:', parsed);
-      return parsed;
+      return JSON.parse(saved);
     }
   } catch (err) {
     console.error('Failed to load from localStorage:', err);
@@ -29,11 +26,6 @@ function loadFromStorage() {
 // localStorage에 저장
 export function saveEditorState() {
   if (typeof window === 'undefined') return;
-  
-  console.log('[editorState] saveEditorState called');
-  console.log('[editorState] Current botSource:', editorState.botSource);
-  console.log('[editorState] Current botDescription length:', editorState.botDescription.length);
-  console.log('[editorState] Current botDescription preview:', editorState.botDescription.substring(0, 50));
   
   try {
     // customVars를 순수 객체로 변환
@@ -55,20 +47,15 @@ export function saveEditorState() {
     // botSource가 'saved'일 때는 selectedBot도 저장
     if (editorState.botSource === 'saved') {
       dataToSave.selectedBot = editorState.selectedBot;
-      console.log('[editorState] Saving selectedBot:', editorState.selectedBot);
     }
     
     // botSource가 'saved'가 아닐 때만 botName과 botDescription 저장
     if (editorState.botSource !== 'saved') {
       dataToSave.botName = editorState.botName;
       dataToSave.botDescription = editorState.botDescription;
-      console.log('[editorState] Saving bot info (custom mode)');
-    } else {
-      console.log('[editorState] Skipping bot info (saved mode - will load from file)');
     }
     
     const jsonData = JSON.stringify(dataToSave);
-    console.log('[editorState] Saving to localStorage:', jsonData);
     localStorage.setItem(STORAGE_KEY, jsonData);
   } catch (err) {
     console.error('Failed to save to localStorage:', err);

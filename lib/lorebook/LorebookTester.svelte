@@ -95,11 +95,7 @@
     promptPreviewData = null; // 이전 데이터 초기화
 
     try {
-      console.log('[LorebookTester] Starting preview generation...');
       const result = await generatePromptPreview(lorebooks, conversationText, botName, lorebookSettings, regexScripts);
-      console.log('[LorebookTester] Preview result:', result);
-      console.log('[LorebookTester] Messages count:', result.messages?.length);
-      console.log('[LorebookTester] Full prompt length:', result.fullPrompt?.length);
       
       // 데이터를 먼저 설정하고
       promptPreviewData = result;
@@ -108,7 +104,6 @@
       // 다음 틱에서 모달 표시
       await new Promise(resolve => setTimeout(resolve, 0));
       showPromptPreview = true;
-      console.log('[LorebookTester] Modal shown');
     } catch (error) {
       console.error('[LorebookTester] Preview error:', error);
       errorMessage = error instanceof Error ? error.message : String(error);
