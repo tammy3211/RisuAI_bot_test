@@ -10,8 +10,7 @@
     getCurrentChatData,
     clearCurrentChatMessages,
     updateMessage,
-    deleteMessage,
-    type ChatParseResult
+    deleteMessage
   } from '../../ts/ChatParser';
   import type { Message } from '../../ts/mockDatabase';
 
@@ -32,9 +31,6 @@
   
   // Expand/Collapse state
   let isExpanded = $state(false);
-
-  // Chat parsing results for debugging
-  let lastParseResult = $state<ChatParseResult | null>(null);
 
   async function hydrateMessages(fromStart = false) {
     if (fromStart) {
@@ -138,16 +134,12 @@
     try {
       if (selectedRole === 'user') {
         // User message flow - 입력만 처리, AI 응답 생성 없음
-        const parseResult = await simulateUserInputFlow(inputText);
-        lastParseResult = parseResult;
-
+        await simulateUserInputFlow(inputText);
         await hydrateMessages();
 
       } else {
         // Assistant message flow - AI 응답으로 처리
-        const parseResult = await simulateAIResponseFlow(inputText);
-        lastParseResult = parseResult;
-
+        await simulateAIResponseFlow(inputText);
         await hydrateMessages();
       }
 
@@ -180,7 +172,6 @@
   function confirmClear() {
     clearCurrentChatMessages();
     messages = [];
-    lastParseResult = null;
     lastRenderedIndex = -1;
     showClearConfirm = false;
   }
@@ -410,22 +401,6 @@
       
       <div class="text-xs text-gray-500">💡 Enter로 전송, Shift+Enter로 줄바꿈</div>
     </div>
-
-    <!-- Debug info -->
-    {#if lastParseResult}
-      <details class="mt-3">
-        <summary class="text-sm text-gray-600 cursor-pointer hover:text-gray-800">
-          마지막 파싱 결과 보기
-        </summary>
-        <div class="mt-2 p-3 bg-gray-100 rounded text-xs font-mono">
-          <div><strong>원본 입력:</strong> {lastParseResult.originalInput}</div>
-          <div><strong>처리된 입력:</strong> {lastParseResult.processedInput}</div>
-          <div><strong>AI 응답:</strong> {lastParseResult.aiResponse}</div>
-          <div><strong>처리된 응답:</strong> {lastParseResult.processedResponse}</div>
-          <div><strong>실행된 트리거:</strong> {lastParseResult.triggersExecuted.join(', ')}</div>
-        </div>
-      </details>
-    {/if}
   </div>
   </div>
 {/if}
