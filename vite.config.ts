@@ -13,7 +13,18 @@ export default defineConfig({
     mockGlobalApiPlugin(), // MUST be first to intercept imports
     wasm(),
     topLevelAwait(),
-    svelte(),
+    svelte({
+      compilerOptions: {
+        runes: true
+      },
+      // Exclude lucide-svelte from runes mode
+      onwarn: (warning, handler) => {
+        if (warning.filename?.includes('lucide-svelte')) {
+          return;
+        }
+        handler(warning);
+      }
+    }),
     watchBotsPlugin() // Watch save folder for changes
   ],
   root: '.',
@@ -50,6 +61,7 @@ export default defineConfig({
   optimizeDeps: {
     esbuildOptions: {
       target: 'esnext'
-    }
+    },
+    exclude: ['lucide-svelte']
   }
 });

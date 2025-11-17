@@ -10,7 +10,8 @@
     getCurrentChatData,
     clearCurrentChatMessages,
     updateMessage,
-    deleteMessage
+    deleteMessage,
+    loadChatFromLocalStorage
   } from '../../ts/ChatParser';
   import type { Message } from '../../ts/mockDatabase';
 
@@ -92,15 +93,32 @@
   // Track the current bot to detect changes
   let currentBotName = $state<string | null>(null);
 
-  onMount(() => {
-    currentBotName = editorState.selectedBot;
-  });
+  // ChatTab에서 호출할 수 있는 메서드
+  export function loadFromStorage() {
+    console.log('[ChatScreen] loadFromStorage called');
+    
+    // localStorage에서 로드 시도
+    const loaded = loadChatFromLocalStorage();
+    if (loaded) {
+      console.log('[ChatScreen] Chat restored from localStorage');
+      // 로드 성공 시 메시지 표시
+      hydrateMessages(false).catch((error) => {
+        console.error('[ChatScreen] Failed to hydrate restored messages:', error);
+      });
+    } else {
+      console.log('[ChatScreen] No saved chat to restore, showing first message');
+      // 로드 실패 시 첫 메시지만 표시
+      hydrateMessages(true).catch((error) => {
+        console.error('[ChatScreen] Failed to hydrate first message:', error);
+      });
+    }
+  }
 
   $effect(() => {
     const bot = editorState.selectedBot;
     
-    // Only re-hydrate if the bot actually changed (not just a reactive update)
-    if (bot !== currentBotName) {
+    // 봇이 변경되었을 때만 초기화
+    if (bot !== currentBotName && currentBotName !== null) {
       currentBotName = bot;
       
       if (!bot) {
@@ -108,12 +126,14 @@
         lastRenderedIndex = -1;
         firstMessage = '';
         firstMessageLoading = false;
-        return;
+      } else {
+        // 봇 변경 시 초기화
+        hydrateMessages(true).catch((error) => {
+          console.error('[ChatScreen] Failed to hydrate messages:', error);
+        });
       }
-      
-      hydrateMessages(true).catch((error) => {
-        console.error('[ChatScreen] Failed to hydrate messages on bot change:', error);
-      });
+    } else if (currentBotName === null && bot) {
+      currentBotName = bot;
     }
   });
 

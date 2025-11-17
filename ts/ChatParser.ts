@@ -7,6 +7,113 @@ import { getCurrentChat, getCurrentCharacter, setCurrentChat } from '../../src/t
 import { editorState, saveEditorState } from '../lib/shared/editorState.svelte';
 
 // ============================================================================
+// localStorage 저장/로드
+// ============================================================================
+
+const STORAGE_KEY = 'risuai_bot_test_chat';
+
+export function saveChatToLocalStorage() {
+  try {
+    const chat = getCurrentChat();
+    if (!chat) return;
+    
+    // CBS 변수와 customVars는 같으므로 customVars만 저장
+    const chatData = {
+      messages: chat.message || [],
+      customVars: editorState.customVars || {},
+      savedAt: Date.now()
+    };
+    
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(chatData));
+    console.log('[ChatParser] Chat saved to localStorage:', chatData.messages.length, 'messages');
+  } catch (error) {
+    console.error('[ChatParser] Failed to save chat:', error);
+  }
+}
+
+export function loadChatFromLocalStorage() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) {
+      console.log('[ChatParser] No saved chat found in localStorage');
+      return false;
+    }
+    
+    console.log('[ChatParser] Found saved data, attempting to load...');
+    const chatData = JSON.parse(saved);
+    
+    // getCurrentChat이 null이면 chat 객체를 생성
+    let chat = getCurrentChat();
+    if (!chat) {
+      console.log('[ChatParser] Chat not found, creating new chat object...');
+      const char = getCurrentCharacter();
+      if (!char) {
+        console.warn('[ChatParser] No character found, cannot create chat');
+        return false;
+      }
+      
+      // 새 chat 객체 생성
+      const newChat = {
+        message: [],
+        note: '',
+        name: 'Chat',
+        localLore: [],
+        modules: [],
+        scriptstate: {},
+        id: `chat-${Date.now()}`,
+        lastDate: Date.now()
+      };
+      
+      // chats 배열이 없으면 생성
+      if (!char.chats) {
+        char.chats = [];
+      }
+      if (char.chats.length === 0) {
+        char.chats.push(newChat);
+      }
+      
+      chat = getCurrentChat();
+      if (!chat) {
+        console.error('[ChatParser] Failed to create chat object');
+        return false;
+      }
+    }
+    
+    console.log('[ChatParser] Chat object available, restoring messages...');
+    
+    // 메시지 복원
+    chat.message = chatData.messages || [];
+    
+    // customVars 복원
+    editorState.customVars = chatData.customVars || {};
+    
+    // scriptstate 동기화 (customVars → scriptstate)
+    chat.scriptstate = {};
+    for (const key in editorState.customVars) {
+      chat.scriptstate['$' + key] = editorState.customVars[key];
+    }
+    
+    setCurrentChat(chat);
+    saveEditorState();
+    
+    console.log('[ChatParser] Chat loaded from localStorage:', chat.message.length, 'messages');
+    return true;
+  } catch (error) {
+    console.error('[ChatParser] Failed to load chat:', error);
+    return false;
+  }
+}
+
+export function clearChatFromLocalStorage() {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    console.log('[ChatParser] Chat cleared from localStorage');
+  } catch (error) {
+    console.error('[ChatParser] Failed to clear chat:', error);
+  }
+}
+
+// ============================================================================
 // CBS 변수 동기화 (chat.scriptstate ↔ editorState.customVars)
 // ============================================================================
 
@@ -81,6 +188,7 @@ export async function simulateUserInputFlow(userInput: string) {
   chat.message ??= [];
   chat.message.push({ role: 'user', data: processed, time: Date.now() });
   setCurrentChat(chat);
+  saveChatToLocalStorage();
 
   // 4. Start 트리거
   if (char.type !== 'group') {
@@ -107,6 +215,7 @@ export async function simulateAIResponseFlow(aiResponse: string) {
   chat.message ??= [];
   chat.message.push({ role: 'char', data: processed, time: Date.now() });
   setCurrentChat(chat);
+  saveChatToLocalStorage();
 
   // 4. Output 트리거
   if (char.type !== 'group') {
@@ -135,7 +244,17 @@ export function clearCurrentChatMessages() {
   const chat = getCurrentChat();
   if (chat) {
     chat.message = [];
+    chat.scriptstate = {};
     setCurrentChat(chat);
+    
+    // customVars도 초기화
+    editorState.customVars = {};
+    saveEditorState();
+    
+    // localStorage에서도 삭제
+    clearChatFromLocalStorage();
+    
+    console.log('[ChatParser] Chat cleared');
   }
 }
 
@@ -146,6 +265,7 @@ export function updateMessage(index: number, newData: string) {
   chat.message[index].data = newData;
   chat.message[index].time = Date.now();
   setCurrentChat(chat);
+  saveChatToLocalStorage();
 }
 
 export function deleteMessage(index: number) {
@@ -154,4 +274,5 @@ export function deleteMessage(index: number) {
   
   chat.message.splice(index, 1);
   setCurrentChat(chat);
+  saveChatToLocalStorage();
 }

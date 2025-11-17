@@ -13,9 +13,9 @@
 
       console.log('[ChatTab] Bot loaded:', editorState.selectedBot);
 
-      // Refresh ChatScreen to show first message
-      if (chatScreenRef?.refresh) {
-        chatScreenRef.refresh();
+      // Refresh ChatScreen and load from localStorage
+      if (chatScreenRef?.loadFromStorage) {
+        chatScreenRef.loadFromStorage();
       }
     }
   }
