@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import BotList from '../shared/BotList.svelte';
   import LorebookList from './LorebookList.svelte';
   import LorebookSettings from './LorebookSettings.svelte';
@@ -6,6 +7,7 @@
   import type { LorebookEntry } from '../../ts/mockDatabase';
   import { loadBotLorebook } from '../shared/botLoader.svelte';
   import { loadJSON, saveJSON } from '../shared/localStorage.svelte';
+  import { editorState } from '../shared/editorState.svelte';
 
   let selectedBot = $state('');
   let lorebooks = $state<LorebookEntry[]>([]);
@@ -26,6 +28,14 @@
   
   // 로어북 설정 상태
   let lorebookSettings = $state(loadLorebookSettings());
+
+  // 마운트 시 이미 선택된 봇이 있으면 로어북 로드
+  onMount(() => {
+    if (editorState.selectedBot && editorState.botSource === 'saved') {
+      selectedBot = editorState.selectedBot;
+      handleSelectBot(editorState.selectedBot);
+    }
+  });
 
   async function handleSelectBot(botName: string) {
     selectedBot = botName;  // 봇 선택 상태 업데이트
