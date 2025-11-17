@@ -247,16 +247,21 @@
 {#if isExpanded}
   <!-- Expanded View (RisuAI Original Screen) -->
   <div class="fixed inset-0 z-50">
-    <RisuAIoriginScreen onCollapse={() => isExpanded = false} />
+    <RisuAIoriginScreen 
+      onCollapse={() => isExpanded = false}
+      onRefresh={() => hydrateMessages(true)}
+    />
   </div>
 {:else}
   <!-- Normal View -->
   <div class="flex flex-col h-full relative">
     <!-- Expand button (top-right) -->
+     
     <button
       onclick={() => isExpanded = true}
       class="group absolute top-4 right-4 z-10 rounded-lg bg-blue-500 bg-opacity-50 p-2 shadow-md transition-all hover:bg-blue-450 hover:bg-opacity-80 hover:shadow-lg"
       title="확장"
+      disabled={!editorState.selectedBot}
     >
       <svg 
         class="h-5 w-5 opacity-60 transition-opacity group-hover:opacity-100" 
@@ -268,7 +273,7 @@
     </button>
     
     <!-- Chat messages area -->
-    <div class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 rounded-lg border-2 border-gray-300">
+    <div class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 rounded-lg">
     <!-- First message display -->
     {#if firstMessage && editorState.selectedBot}
       <div class="flex justify-start">
@@ -380,7 +385,7 @@
     {#if !editorState.selectedBot}
       <div class="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
         <div class="text-sm text-yellow-800">
-          ⚠️ 봇이 선택되지 않았습니다. <strong>BotSettings 탭</strong>에서 봇을 선택한 후 채팅을 시작하세요.
+          ⚠️ 봇이 선택되지 않았습니다. <strong>봇 목록</strong>에서 봇을 선택한 후 채팅을 시작하세요.
         </div>
       </div>
     {/if}
