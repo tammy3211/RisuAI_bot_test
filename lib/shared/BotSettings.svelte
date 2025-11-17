@@ -1,13 +1,15 @@
 <script lang="ts">
   import { editorState, saveEditorState } from './editorState.svelte';
   import BotSourceSelector from './BotSourceSelector.svelte';
+  import BotList from './BotList.svelte';
   import Modal from '../UI/Modal.svelte';
   
   interface Props {
     onLoadBot?: () => void;
+    useBotList?: boolean; // true면 BotList 사용, false면 BotSourceSelector 사용
   }
   
-  let { onLoadBot }: Props = $props();
+  let { onLoadBot, useBotList = false }: Props = $props();
   
   let showAddVarModal = $state(false);
   let newVarName = $state('');
@@ -51,14 +53,17 @@
   
   // customVars 값 변경 시 저장
   function handleCustomVarChange(key: string, value: string) {
-    editorState.customVars[key] = value;
-    saveEditorState();
+    editorState.setCustomVar(key, value);
   }
 </script>
 
 <div class="flex flex-col space-y-5">
   <!-- 봇 정보 소스 - 맨 위로 이동 -->
-  <BotSourceSelector onLoadBot={onLoadBot} />
+  {#if useBotList}
+    <BotList onSelectBot={onLoadBot} />
+  {:else}
+    <BotSourceSelector onLoadBot={onLoadBot} />
+  {/if}
 
   <div class="rounded-xl bg-gray-100 p-6">
     <div class="mb-5 flex items-center justify-between border-b-2 border-slate-200 pb-2.5 text-lg font-semibold text-slate-600">

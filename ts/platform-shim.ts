@@ -85,7 +85,13 @@ export function getChatVar(key: string): string {
 
 export function setChatVar(key: string, value: string) {
   _chatVariables[key] = value;
-  //console.log('[platform-shim] setChatVar called:', key, '=', value);
+  
+  // CRITICAL: chat.scriptstate에도 동기화 (syncScriptStateToEditor가 읽을 수 있도록)
+  if (_mockDatabase.characters?.[0]?.chats?.[0]?.scriptstate) {
+    _mockDatabase.characters[0].chats[0].scriptstate['$' + key] = value;
+  }
+  
+  console.log('[platform-shim] setChatVar:', key, '=', value, '(synced to scriptstate)');
 }
 
 export function getGlobalChatVar(key: string): string {

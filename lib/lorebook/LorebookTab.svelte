@@ -1,10 +1,11 @@
 <script lang="ts">
-  import BotList from './BotList.svelte';
+  import BotList from '../shared/BotList.svelte';
   import LorebookList from './LorebookList.svelte';
   import LorebookSettings from './LorebookSettings.svelte';
   import LorebookDetail from './LorebookDetail.svelte';
   import type { LorebookEntry } from '../../ts/mockDatabase';
   import { loadBotLorebook } from '../shared/botLoader.svelte';
+  import { loadJSON, saveJSON } from '../shared/localStorage.svelte';
 
   let selectedBot = $state('');
   let lorebooks = $state<LorebookEntry[]>([]);
@@ -15,20 +16,12 @@
   
   // localStorage에서 로어북 설정 로드
   function loadLorebookSettings() {
-    try {
-      const saved = localStorage.getItem('lorebookSettings');
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (error) {
-      console.warn('[LorebookTab] Failed to load settings from localStorage:', error);
-    }
-    return {
+    return loadJSON('lorebookSettings', {
       recursiveScanning: true,
       fullWordMatching: false,
       scanDepth: 5,
       tokenBudget: 800
-    };
+    }, '[LorebookTab]');
   }
   
   // 로어북 설정 상태
@@ -60,12 +53,7 @@
   
   function handleSettingsChange(settings: typeof lorebookSettings) {
     lorebookSettings = settings;
-    // localStorage에 저장
-    try {
-      localStorage.setItem('lorebookSettings', JSON.stringify(settings));
-    } catch (error) {
-      console.warn('[LorebookTab] Failed to save settings to localStorage:', error);
-    }
+    saveJSON('lorebookSettings', settings, '[LorebookTab]');
     console.log('[LorebookTab] Settings updated:', settings);
   }
 </script>

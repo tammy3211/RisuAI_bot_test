@@ -1,13 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { loadAllBots } from '../shared/botLoader.svelte';
+  import { loadAllBots } from './botLoader.svelte';
+  import { editorState, saveEditorState } from './editorState.svelte';
 
   interface Props {
-    selectedBot: string;
-    onSelectBot: (botName: string) => void;
+    onSelectBot?: (botName: string) => void;
   }
 
-  let { selectedBot = $bindable(), onSelectBot }: Props = $props();
+  let { onSelectBot }: Props = $props();
 
   let botList = $state<string[]>([]);
   let loading = $state(false);
@@ -29,8 +29,13 @@
   }
 
   function handleSelectBot(botName: string) {
-    selectedBot = botName;
-    onSelectBot(botName);
+    editorState.selectedBot = botName;
+    editorState.botSource = 'saved';
+    saveEditorState();
+    
+    if (onSelectBot) {
+      onSelectBot(botName);
+    }
   }
 </script>
 
@@ -54,7 +59,7 @@
     <div class="flex max-h-[calc(100vh-200px)] flex-col gap-2 overflow-y-auto">
       {#each botList as botName}
         <button
-          class={selectedBot === botName 
+          class={editorState.selectedBot === botName 
             ? "flex items-center gap-3 rounded-lg border-2 border-blue-500 bg-blue-500 px-4 py-3 text-left font-medium text-white transition-transform duration-150 hover:scale-[0.98] focus:outline-none"
             : "flex items-center gap-3 rounded-lg border-2 border-gray-300 bg-white px-4 py-3 text-left font-medium text-gray-700 transition-transform duration-150 hover:border-blue-400 hover:scale-[0.98] focus:outline-none"
           }

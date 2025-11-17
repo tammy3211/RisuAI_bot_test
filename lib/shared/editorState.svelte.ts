@@ -6,61 +6,9 @@
  * localStorage에 자동 저장/로드
  */
 
+import { loadJSON, saveJSON } from './localStorage.svelte';
+
 const STORAGE_KEY = 'risuai-editor-state';
-
-// localStorage에서 초기 데이터 로드
-function loadFromStorage() {
-  if (typeof window === 'undefined') return null;
-  
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      return JSON.parse(saved);
-    }
-  } catch (err) {
-    console.error('Failed to load from localStorage:', err);
-  }
-  return null;
-}
-
-// localStorage에 저장
-export function saveEditorState() {
-  if (typeof window === 'undefined') return;
-  
-  try {
-    // customVars를 순수 객체로 변환
-    const plainCustomVars: {[key: string]: string} = {};
-    for (const key in editorState.customVars) {
-      plainCustomVars[key] = editorState.customVars[key];
-    }
-    
-    // 메서드 제외하고 순수 데이터만 추출
-    const dataToSave: any = {
-      botSource: editorState.botSource,
-      savedBots: editorState.savedBots,
-      selectedBot: editorState.selectedBot,
-      userName: editorState.userName,
-      userPersona: editorState.userPersona,
-      customVars: plainCustomVars
-    };
-    
-    // botSource가 'saved'일 때는 selectedBot도 저장
-    if (editorState.botSource === 'saved') {
-      dataToSave.selectedBot = editorState.selectedBot;
-    }
-    
-    // botSource가 'saved'가 아닐 때만 botName과 botDescription 저장
-    if (editorState.botSource !== 'saved') {
-      dataToSave.botName = editorState.botName;
-      dataToSave.botDescription = editorState.botDescription;
-    }
-    
-    const jsonData = JSON.stringify(dataToSave);
-    localStorage.setItem(STORAGE_KEY, jsonData);
-  } catch (err) {
-    console.error('Failed to save to localStorage:', err);
-  }
-}
 
 // 기본값
 const defaultState = {
@@ -74,25 +22,59 @@ const defaultState = {
   regexScripts: [] as any[],
   lorebookEntries: [] as any[],
   customVars: {
-    'test_var': 'example value'
-  } as {[key: string]: string}
+    test_var: 'example value'
+  } as { [key: string]: string }
 };
 
 // localStorage에서 로드하거나 기본값 사용
-const savedState = loadFromStorage();
+const savedState = loadJSON<typeof defaultState | null>(STORAGE_KEY, null, '[EditorState]');
 const initialState = savedState ? { ...defaultState, ...savedState } : defaultState;
 
+// localStorage에 저장
+export function saveEditorState() {
+  if (typeof window === 'undefined') return;
+
+  try {
+    const dataToSave: any = {
+      botSource: editorState.botSource,
+      savedBots: editorState.savedBots,
+      selectedBot: editorState.selectedBot,
+      userName: editorState.userName,
+      userPersona: editorState.userPersona,
+      customVars: { ...editorState.customVars }
+    };
+
+    if (editorState.botSource !== 'saved') {
+      dataToSave.botName = editorState.botName;
+      dataToSave.botDescription = editorState.botDescription;
+    } else {
+      dataToSave.selectedBot = editorState.selectedBot;
+    }
+
+    saveJSON(STORAGE_KEY, dataToSave, '[EditorState]');
+  } catch (error) {
+    console.warn('[EditorState] Failed to save:', error);
+  }
+}
+
+// $state 객체 (단순 객체 + helper 메서드)
 export const editorState = $state({
   ...initialState,
-  
-  // Helper methods
+
   addCustomVar(key: string, value: string = '') {
-    this.customVars[key] = value;
+    this.customVars = { ...this.customVars, [key]: value };
     saveEditorState();
   },
-  
+
   removeCustomVar(key: string) {
-    delete this.customVars[key];
+    const next = { ...this.customVars };
+    delete next[key];
+    this.customVars = next;
+    saveEditorState();
+  },
+
+  setCustomVar(key: string, value: string) {
+    this.customVars = { ...this.customVars, [key]: value };
     saveEditorState();
   }
 });

@@ -197,11 +197,13 @@
                       <span class="rounded bg-amber-500 px-1.5 py-0.5 text-[10px] text-white">첫 메시지</span>
                     {:else}
                       <button
-                        class="ml-1 rounded p-0.5 text-xs opacity-0 transition-all hover:bg-black/10 group-hover:opacity-100"
+                        class="ml-1 rounded p-0.5 text-xs opacity-0 transition-all group-hover:opacity-100"
                         onclick={() => startEdit(message)}
                         title="수정"
                       >
-                        ✏️
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
                       </button>
                     {/if}
                   </div>

@@ -64,7 +64,7 @@
 
     <!-- Right: Bot settings -->
     <div class="space-y-6">
-      <BotSettings onLoadBot={handleLoadBot} />
+      <BotSettings onLoadBot={handleLoadBot} useBotList={true} />
     </div>
   </div>
 </div>

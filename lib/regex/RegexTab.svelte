@@ -6,6 +6,7 @@
   import RegexItem from './RegexItem.svelte';
   import RegexTester from './RegexTester.svelte';
   import { loadAllBots, loadBotRegexScripts } from '../shared/botLoader.svelte';
+  import { loadJSON, saveJSON } from '../shared/localStorage.svelte';
 
   interface CustomScript {
     comment: string;
@@ -36,17 +37,7 @@
   });
 
   function getRegexStorage(): Record<string, CustomScript[]> {
-    if (typeof window === 'undefined') return {};
-    try {
-      const raw = localStorage.getItem(REGEX_STORAGE_KEY);
-      if (!raw) return {};
-      const parsed = JSON.parse(raw);
-      if (typeof parsed !== 'object' || parsed === null) return {};
-      return parsed;
-    } catch (err) {
-      console.warn('[RegexTab] Failed to parse regex storage:', err);
-      return {};
-    }
+    return loadJSON<Record<string, CustomScript[]>>(REGEX_STORAGE_KEY, {}, '[RegexTab]');
   }
 
   function getRegexStorageKey() {
@@ -63,7 +54,7 @@
   }
 
   function persistRegexToStorage(list: Array<CustomScript & { id: string }>) {
-    if (typeof window === 'undefined' || isLoadingRegex) return;
+    if (isLoadingRegex) return;
     const storage = getRegexStorage();
     const key = getRegexStorageKey();
     storage[key] = list.map(({ id, ...rest }) => ({
@@ -72,11 +63,7 @@
       flag: rest.flag ?? 'g',
       ableFlag: rest.ableFlag ?? true
     }));
-    try {
-      localStorage.setItem(REGEX_STORAGE_KEY, JSON.stringify(storage));
-    } catch (err) {
-      console.warn('[RegexTab] Failed to persist regex list:', err);
-    }
+    saveJSON(REGEX_STORAGE_KEY, storage, '[RegexTab]');
   }
 
   async function loadRegexData(forceFromDisk = false) {

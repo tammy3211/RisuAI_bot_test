@@ -5,9 +5,10 @@ import { runTrigger } from '../../src/ts/process/triggers';
 import { risuChatParser } from '../../src/ts/parser.svelte';
 import { getCurrentChat, getCurrentCharacter, setCurrentChat } from '../../src/ts/storage/database.svelte';
 import { editorState, saveEditorState } from '../lib/shared/editorState.svelte';
+import { loadJSON, removeKey, saveJSON } from '../lib/shared/localStorage.svelte';
 
 // ============================================================================
-// localStorage 저장/로드
+// localStorage 저장/로드 (채팅 메시지만 저장, 변수는 editorState에서 관리)
 // ============================================================================
 
 const STORAGE_KEY = 'risuai_bot_test_chat';
@@ -17,14 +18,12 @@ export function saveChatToLocalStorage() {
     const chat = getCurrentChat();
     if (!chat) return;
     
-    // CBS 변수와 customVars는 같으므로 customVars만 저장
     const chatData = {
       messages: chat.message || [],
-      customVars: editorState.customVars || {},
       savedAt: Date.now()
     };
     
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(chatData));
+    saveJSON(STORAGE_KEY, chatData, '[ChatParser]');
     console.log('[ChatParser] Chat saved to localStorage:', chatData.messages.length, 'messages');
   } catch (error) {
     console.error('[ChatParser] Failed to save chat:', error);
@@ -33,14 +32,17 @@ export function saveChatToLocalStorage() {
 
 export function loadChatFromLocalStorage() {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = loadJSON<{
+      messages: any[];
+      savedAt: number;
+    } | null>(STORAGE_KEY, null, '[ChatParser]');
     if (!saved) {
       console.log('[ChatParser] No saved chat found in localStorage');
       return false;
     }
     
     console.log('[ChatParser] Found saved data, attempting to load...');
-    const chatData = JSON.parse(saved);
+    const chatData = saved;
     
     // getCurrentChat이 null이면 chat 객체를 생성
     let chat = getCurrentChat();
@@ -84,17 +86,13 @@ export function loadChatFromLocalStorage() {
     // 메시지 복원
     chat.message = chatData.messages || [];
     
-    // customVars 복원
-    editorState.customVars = chatData.customVars || {};
-    
-    // scriptstate 동기화 (customVars → scriptstate)
+    // scriptstate 동기화 (editorState.customVars → scriptstate)
     chat.scriptstate = {};
     for (const key in editorState.customVars) {
       chat.scriptstate['$' + key] = editorState.customVars[key];
     }
     
     setCurrentChat(chat);
-    saveEditorState();
     
     console.log('[ChatParser] Chat loaded from localStorage:', chat.message.length, 'messages');
     return true;
@@ -106,7 +104,7 @@ export function loadChatFromLocalStorage() {
 
 export function clearChatFromLocalStorage() {
   try {
-    localStorage.removeItem(STORAGE_KEY);
+    removeKey(STORAGE_KEY, '[ChatParser]');
     console.log('[ChatParser] Chat cleared from localStorage');
   } catch (error) {
     console.error('[ChatParser] Failed to clear chat:', error);
@@ -120,14 +118,44 @@ export function clearChatFromLocalStorage() {
 function syncScriptStateToEditor() {
   try {
     const chat = getCurrentChat();
-    if (!chat?.scriptstate) return;
+    if (!chat) {
+      console.warn('[ChatParser][setvar] No active chat - skipping sync');
+      return;
+    }
+    if (!chat.scriptstate) {
+      console.warn('[ChatParser][setvar] chat.scriptstate missing - skipping sync. chat.id:', chat.id);
+      return;
+    }
+
+    const nextVars = { ...editorState.customVars };
+    let changed = false;
+    const changedLogs: string[] = [];
 
     for (const key in chat.scriptstate) {
-      if (key.startsWith('$')) {
-        editorState.customVars[key.substring(1)] = String(chat.scriptstate[key]);
+      if (!key.startsWith('$')) continue;
+
+      const varName = key.substring(1);
+      const value = String(chat.scriptstate[key]);
+      const prev = nextVars[varName];
+      if (prev !== value) {
+        changedLogs.push(`${varName}: ${prev ?? '(new)'} -> ${value}`);
+        nextVars[varName] = value;
+        changed = true;
       }
     }
-    saveEditorState();
+
+    if (changed) {
+      editorState.customVars = nextVars;
+      saveEditorState();
+      if (changedLogs.length > 0) {
+        console.log('[ChatParser][setvar]', changedLogs.join(', '));
+      }
+    } else {
+      const keys = Object.keys(chat.scriptstate).filter(k => k.startsWith('$'));
+      if (keys.length > 0) {
+        console.log('[ChatParser][setvar] no changes detected. keys:', keys.join(', '));
+      }
+    }
   } catch (error) {
     console.error('[ChatParser] Sync error:', error);
   }
@@ -139,9 +167,17 @@ function syncEditorToScriptState() {
     if (!chat) return;
 
     chat.scriptstate ??= {};
+    
+    // editorState → scriptstate 동기화
+    // 단, scriptstate에 이미 값이 있으면 건드리지 않음 (setChatVar로 변경된 값 보존)
     for (const key in editorState.customVars) {
-      chat.scriptstate['$' + key] = editorState.customVars[key];
+      const scriptKey = '$' + key;
+      // scriptstate에 없는 변수만 추가
+      if (!(scriptKey in chat.scriptstate)) {
+        chat.scriptstate[scriptKey] = editorState.customVars[key];
+      }
     }
+    
     setCurrentChat(chat);
   } catch (error) {
     console.error('[ChatParser] Sync error:', error);
@@ -158,7 +194,11 @@ async function processWithSync(text: string, mode: 'editinput' | 'editoutput' | 
 
   syncEditorToScriptState();
   const result = await processScriptFull(char, text, mode, index, mode === 'editdisplay' ? { firstmsg: index === -1 } : {});
-  syncScriptStateToEditor();
+  
+  // editdisplay는 변수 변경이 없으므로 동기화/로그를 생략
+  if (mode !== 'editdisplay') {
+    syncScriptStateToEditor();
+  }
   
   return result.data;
 }
@@ -246,10 +286,6 @@ export function clearCurrentChatMessages() {
     chat.message = [];
     chat.scriptstate = {};
     setCurrentChat(chat);
-    
-    // customVars도 초기화
-    editorState.customVars = {};
-    saveEditorState();
     
     // localStorage에서도 삭제
     clearChatFromLocalStorage();
