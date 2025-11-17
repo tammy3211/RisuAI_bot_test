@@ -156,32 +156,102 @@ export class TauriWriter {
 }
 
 export class LocalWriter {
-  write(_data: Uint8Array) {}
-  close() {}
+  private stream: WritableStream<Uint8Array> | null = null;
+  private writer: WritableStreamDefaultWriter<Uint8Array> | null = null;
+
+  async init(name = 'Binary', ext = ['bin']): Promise<boolean> {
+    try {
+      // Web browser implementation using StreamSaver
+      const streamSaver = await import('streamsaver');
+      const filename = `${name}.${ext[0]}`;
+      this.stream = streamSaver.createWriteStream(filename);
+      this.writer = this.stream.getWriter();
+      return true;
+    } catch (error) {
+      console.error('Failed to initialize LocalWriter:', error);
+      return false;
+    }
+  }
+
+  async write(data: Uint8Array | string) {
+    if (!this.writer) {
+      throw new Error('LocalWriter not initialized. Call init() first.');
+    }
+    
+    // Handle undefined or null data
+    if (data === undefined || data === null) {
+      console.warn('[LocalWriter] Skipping write - data is', data);
+      return;
+    }
+    
+    const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
+    
+    // Skip empty writes
+    if (bytes.length === 0) {
+      console.log('[LocalWriter] Skipping empty write');
+      return;
+    }
+    
+    console.log('[LocalWriter] Writing', bytes.length, 'bytes');
+    await this.writer.write(bytes);
+  }
+
+  async close() {
+    console.log('[LocalWriter] Closing writer...');
+    if (this.writer) {
+      await this.writer.close();
+      this.writer = null;
+      this.stream = null;
+      console.log('[LocalWriter] Writer closed successfully');
+    }
+  }
 }
 
 export class VirtualWriter {
-  write(_data: Uint8Array) {}
-  close() {}
+  private buffer = new AppendableBuffer();
+
+  async init(): Promise<boolean> {
+    return true;
+  }
+
+  async write(data: Uint8Array | string) {
+    const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
+    this.buffer.append(bytes);
+  }
+
+  async close() {}
+
+  toBuffer(): Uint8Array {
+    return this.buffer.toBuffer();
+  }
 }
 
 export class BlankWriter {
-  write(_data: Uint8Array) {}
-  close() {}
+  async init(): Promise<boolean> {
+    return true;
+  }
+
+  async write(_data: Uint8Array | string) {}
+
+  async close() {}
 }
 
 export class AppendableBuffer {
-  private buffers: Uint8Array[] = [];
-  append(data: Uint8Array) { this.buffers.push(data); }
+  buffer: Uint8Array;
+  
+  constructor() {
+    this.buffer = new Uint8Array(0);
+  }
+  
+  append(data: Uint8Array) {
+    const newBuffer = new Uint8Array(this.buffer.length + data.length);
+    newBuffer.set(this.buffer);
+    newBuffer.set(data, this.buffer.length);
+    this.buffer = newBuffer;
+  }
+  
   toBuffer(): Uint8Array {
-    const totalLength = this.buffers.reduce((sum, buf) => sum + buf.length, 0);
-    const result = new Uint8Array(totalLength);
-    let offset = 0;
-    for (const buf of this.buffers) {
-      result.set(buf, offset);
-      offset += buf.length;
-    }
-    return result;
+    return this.buffer;
   }
 }
 
@@ -198,7 +268,33 @@ export const fetchNative = fetch;
 export async function downloadFile(_url: string, _filename?: string) {}
 export async function saveAsset(_path: string, _data: any) {}
 export async function loadAsset(_path: string) { return null; }
-export async function readImage(_path: string) { return null; }
+
+/**
+ * Read image from URL or path
+ * For bot assets, reads from /save/{botName}/assets/
+ */
+export async function readImage(path: string): Promise<Uint8Array | null> {
+  if (!path) return null;
+  
+  try {
+    // If it's a full URL or data URL, fetch it
+    if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
+      const response = await fetch(path);
+      if (!response.ok) return null;
+      return new Uint8Array(await response.arrayBuffer());
+    }
+    
+    // Otherwise, treat it as a relative path from /save/
+    // Expected format: /save/{botName}/assets/{path}
+    const response = await fetch(path);
+    if (!response.ok) return null;
+    return new Uint8Array(await response.arrayBuffer());
+  } catch (error) {
+    console.error('Failed to read image:', path, error);
+    return null;
+  }
+}
+
 export function getFileSrc(path: string) { return path; }
 
 console.log('✅ Platform shim loaded (globalApi.svelte mock)');

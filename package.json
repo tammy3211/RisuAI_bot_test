@@ -12,6 +12,7 @@
     "lucide-svelte": "^0.554.0",
     "mobile-drag-drop": "^3.0.0-rc.0",
     "rfdc": "^1.4.1",
+    "streamsaver": "^2.0.6",
     "web-streams-polyfill": "^3.3.2"
   },
   "devDependencies": {

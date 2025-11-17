@@ -390,6 +390,41 @@ export async function loadBotBackgroundHTML(botName: string): Promise<string> {
 
 }
 
+/**
+ * Load data for a specific bot by name
+ */
+export async function loadBotData(botName: string) {
+  if (!botName) {
+    console.warn('[botLoader] No bot name provided');
+    return null;
+  }
+  
+  // Load all bot data in parallel
+  const [description, regexScripts, lorebooks, firstMessage, assets, triggerScript, backgroundHTML] = await Promise.all([
+    loadBotDescription(botName),
+    loadBotRegexScripts(botName),
+    loadBotLorebook(botName),
+    loadBotFirstMes(botName),
+    loadBotAssets(botName),
+    loadBotTriggerScript(botName),
+    loadBotBackgroundHTML(botName)
+  ]);
+  
+  return {
+    name: botName,
+    description,
+    firstMessage,
+    regexScripts,
+    lorebooks,
+    emotionImages: assets.emotionImages,
+    additionalAssets: assets.additionalAssets,
+    ccAssets: assets.ccAssets,
+    image: assets.mainImage,
+    triggerscript: triggerScript,
+    backgroundHTML: backgroundHTML
+  };
+}
+
 // 현재 선택된 봇의 모든 데이터를 로드하고 mock character 객체를 반환
 export async function loadSelectedBotData() {
   if (!editorState.selectedBot) {
