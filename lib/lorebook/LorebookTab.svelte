@@ -86,7 +86,6 @@
     <div class="flex min-h-0 flex-col gap-5 max-[900px]:max-h-[500px]">
       <div class="shrink-0">
         <BotList 
-          bind:selectedBot={selectedBot}
           onSelectBot={handleSelectBot}
         />
       </div>
