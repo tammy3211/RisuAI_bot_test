@@ -136,7 +136,7 @@ save/내봇이름/
 
 ```
 RisuAI_bot_test/
-├── lib/                    # Svelte UI 컴포넌트
+├── lib/                   # Svelte UI 컴포넌트
 │   ├── chat/              # 채팅 시뮬레이터 UI
 │   ├── regex/             # 정규식 에디터 & 테스터
 │   ├── lorebook/          # 로어북 관리 인터페이스
@@ -151,6 +151,7 @@ RisuAI_bot_test/
 ├── save/                  # 봇 데이터 저장소
 │   ├── Airisu(example)/   # 샘플 봇
 │   └── [YourBot]/         # 사용자 봇
+├── template/default       # 봇 기본 탬플릿
 ├── public/                # 정적 리소스
 │   └── lua/               # Lua 스크립트 지원
 ├── App.svelte             # 메인 앱

@@ -23,15 +23,15 @@ RisuAI의 마스코트이자 여러분의 친구가 되어드릴게요~ ^^
 
 안녕하세요, {{user}}님! 저는 {{char}}예요!
 
-{{#if {{equal::{{metadata::language}}::ko}}}}
+{{#when {{equal::{{metadata::language}}::ko}}}}
 한국어로 대화할 수 있어서 기뻐요! 😊
-{{/if}}
+{{/when}}
 
-{{#if {{equal::{{metadata::language}}::en}}}}
+{{#when {{equal::{{metadata::language}}::en}}}}
 Nice to meet you! I'm happy to chat in English! 😊
-{{/if}}
+{{/when}}
 
-지금 시각은 {{time}}이네요. {{#if {{equal::{{timeofday}}::morning}}}}좋은 아침이에요!{{/if}}{{#if {{equal::{{timeofday}}::afternoon}}}}좋은 오후에요!{{/if}}{{#if {{equal::{{timeofday}}::evening}}}}좋은 저녁이에요!{{/if}}
+지금 시각은 {{time}}이네요. {{#when {{equal::{{timeofday}}::morning}}}}좋은 아침이에요!{{/when}}{{#when {{equal::{{timeofday}}::afternoon}}}}좋은 오후에요!{{/when}}{{#when {{equal::{{timeofday}}::evening}}}}좋은 저녁이에요!{{/when}}
 
 오늘은 무엇을 도와드릴까요? 🌟
 
@@ -64,5 +64,3 @@ Nice to meet you! I'm happy to chat in English! 😊
 2. **대화의 방향을 제시하세요**  
 3. **CBS를 활용해 동적으로 만드세요**
 4. **너무 길지 않게 유지하세요**
-
-{test}
