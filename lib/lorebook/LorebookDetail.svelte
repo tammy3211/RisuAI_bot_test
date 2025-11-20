@@ -18,6 +18,14 @@
 
   let { lorebook, allLorebooks, viewMode, onModeChange, selectedBot, lorebookSettings }: Props = $props();
 
+  // props 변경 추적
+  $effect(() => {
+    console.log('[LorebookDetail] Props updated:', {
+      lorebook: lorebook?.comment,
+      allLorebooksCount: allLorebooks.length
+    });
+  });
+
   // 폴더 정보를 찾는 함수
   function findFolderInfo(folderKey: string): LorebookEntry | null {
     if (!folderKey) return null;

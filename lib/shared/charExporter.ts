@@ -1,6 +1,5 @@
 // CharX 파일 내보내기 유틸리티
-import { loadBotData } from './botLoader.svelte';
-import type { BotData } from '../../ts/mockDatabase';
+import { botService, type BotData } from './botService';
 import { showError, showSuccess } from './alert.svelte';
 
 /**
@@ -17,7 +16,7 @@ export function convertBotToCharacter(botData: BotData): any {
   };
 
   // Lorebook 변환
-  const globalLore = botData.lorebooks.map(lore => ({
+  const globalLore = botData.lorebook.entries.map(lore => ({
     key: lore.key,
     secondkey: lore.secondkey || '',
     insertorder: lore.insertorder || 0,
@@ -45,7 +44,7 @@ export function convertBotToCharacter(botData: BotData): any {
   const character = {
     type: 'character',
     name: botData.name,
-    image: botData.image || '',
+    image: botData.assets.main || '',
     firstMessage: botData.firstMessage,
     desc: botData.description,
     notes: '',
@@ -54,12 +53,20 @@ export function convertBotToCharacter(botData: BotData): any {
     chatPage: 0,
     viewScreen: 'emotion' as const,
     bias: [],
-    emotionImages: botData.emotionImages || [],
+    emotionImages: botData.assets.emotions || [],
     globalLore: globalLore,
     chaId: generateUUID(),
     sdData: [],
-    customscript: botData.regexScripts || [],
-    triggerscript: botData.triggerscript || [],
+    customscript: botData.regex.scripts || [],
+    triggerscript: botData.trigger.lua ? [{
+      comment: 'Lua Script',
+      type: 'start',
+      conditions: [],
+      effect: [{
+        type: 'triggerlua',
+        code: botData.trigger.lua
+      }]
+    }] : [],
     utilityBot: false,
     exampleMessage: '',
     removedQuotes: false,
@@ -74,10 +81,10 @@ export function convertBotToCharacter(botData: BotData): any {
     scenario: '',
     firstMsgIndex: -1,
     replaceGlobalNote: '',
-    backgroundHTML: botData.backgroundHTML || '',
+    backgroundHTML: botData.trigger.backgroundHTML || '',
     additionalText: '',
-    ccAssets: botData.ccAssets || [],
-    additionalAssets: botData.additionalAssets || []
+    ccAssets: botData.assets.ccAssets || [],
+    additionalAssets: botData.assets.additional || []
   };
 
   return character;
@@ -91,7 +98,7 @@ export async function exportBotAsCharX(botName: string): Promise<void> {
     console.log('[charExporter] Starting export for:', botName);
     
     // 봇 데이터 로드
-    const botData = await loadBotData(botName);
+    const botData = await botService.loadBot(botName);
     console.log('[charExporter] Bot data loaded:', botData);
     
     if (!botData) {
@@ -99,13 +106,13 @@ export async function exportBotAsCharX(botName: string): Promise<void> {
     }
 
     // 이미지가 없으면 경고
-    if (!botData.image) {
+    if (!botData.assets.main) {
       console.error('[charExporter] No image found for bot:', botName);
       showError(`봇 "${botName}"의 이미지를 찾을 수 없습니다.\n\nsave/${botName}/assets/ 폴더에 icon 타입의 이미지를 추가해주세요.`);
       return;
     }
 
-    console.log('[charExporter] Image path:', botData.image);
+    console.log('[charExporter] Image path:', botData.assets.main);
     console.log('[charExporter] Converting to character format...');
     
     // Character 형식으로 변환
@@ -140,7 +147,7 @@ export async function exportBotAsJSON(botName: string): Promise<void> {
   try {
     console.log('[charExporter] Loading bot:', botName);
     
-    const botData = await loadBotData(botName);
+    const botData = await botService.loadBot(botName);
     
     if (!botData) {
       throw new Error('Failed to load bot data');
@@ -180,7 +187,7 @@ export async function exportBotAsPNG(botName: string): Promise<void> {
   try {
     console.log('[charExporter] Loading bot:', botName);
     
-    const botData = await loadBotData(botName);
+    const botData = await botService.loadBot(botName);
     
     if (!botData) {
       throw new Error('Failed to load bot data');

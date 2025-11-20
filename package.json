@@ -19,6 +19,7 @@
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
     "@tailwindcss/typography": "0.5.10",
     "@types/fs-extra": "^11.0.4",
+    "@types/ws": "^8.18.1",
     "autoprefixer": "^10.4.16",
     "fs-extra": "^11.3.2",
     "postcss": "^8.4.33",
@@ -27,6 +28,7 @@
     "typescript": "^5.0.0",
     "vite": "^6.0.0",
     "vite-plugin-top-level-await": "^1.6.0",
-    "vite-plugin-wasm": "^3.5.0"
+    "vite-plugin-wasm": "^3.5.0",
+    "ws": "^8.18.3"
   }
 }

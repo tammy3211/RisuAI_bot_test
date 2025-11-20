@@ -5,7 +5,8 @@
   import { processRegexScripts } from '../../ts/regexProcessor';
   import RegexItem from './RegexItem.svelte';
   import RegexTester from './RegexTester.svelte';
-  import { loadAllBots, loadBotRegexScripts } from '../shared/botLoader.svelte';
+  import { loadAllBots } from '../shared/botLoader.svelte';
+  import { botService } from '../shared/botService';
   import { loadJSON, saveJSON } from '../shared/localStorage.svelte';
 
   interface CustomScript {
@@ -92,7 +93,7 @@
       }
 
       const botName = editorState.selectedBot;
-      const resolvedScripts = await loadBotRegexScripts(botName);
+      const resolvedScripts = await botService.loadRegexScripts(botName);
       
       // Add IDs to each script
       regexList = resolvedScripts.map((script, idx) => ({
@@ -218,19 +219,19 @@
 
 <div class="space-y-7">
   <div class="rounded-xl border-l-4 border-indigo-400 bg-gradient-to-r from-sky-100 to-purple-100 p-6">
-    <h4 class="mb-4 text-xl font-semibold text-indigo-500">Regex Trigger Guide</h4>
+    <h4 class="mb-4 text-xl font-semibold text-indigo-500">🔧 정규식 스크립트 (Regex)</h4>
     <ul class="space-y-2 text-sm leading-relaxed text-slate-700">
       <li class="flex gap-2">
-        <span class="text-indigo-500">&gt;</span>
-        <span>Use regular expressions to transform conversation text automatically</span>
+        <span class="text-indigo-500">✓</span>
+        <span>정규식 패턴을 사용하여 채팅 입력/출력/프롬프트/화면 표시를 자동으로 변환합니다</span>
       </li>
       <li class="flex gap-2">
-        <span class="text-indigo-500">&gt;</span>
-        <span>Applies during input pre-processing (editinput) or output post-processing (editoutput)</span>
+        <span class="text-indigo-500">✓</span>
+        <span>editinput(입력 전처리), editoutput(출력 후처리) 등 4가지 타입으로 적용 시점을 제어합니다</span>
       </li>
       <li class="flex gap-2">
-        <span class="text-indigo-500">&gt;</span>
-        <span>Stores replacement payloads inside dedicated Markdown files</span>
+        <span class="text-indigo-500">✓</span>
+        <span>복잡한 치환 내용은 Markdown 파일로 분리하여 관리하고, CBS 문법도 사용 가능합니다</span>
       </li>
     </ul>
   </div>

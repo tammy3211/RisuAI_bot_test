@@ -1,9 +1,10 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import type { LorebookEntry } from '../../ts/mockDatabase';
   import { runLorebookPrompt, type LorebookPromptResult } from '../../ts/lorebookRunner';
   import { generatePromptPreview, type PromptPreviewResult } from '../../ts/promptPreview';
   import ChatInterface from './ChatInterface.svelte';
-  import { loadBotRegexScripts } from '../shared/botLoader.svelte';
+  import { botService } from '../shared/botService';
 
   interface Message {
     id: string;
@@ -26,6 +27,20 @@
 
   let { lorebooks, botName, lorebookSettings }: Props = $props();
 
+  // props 변경 추적
+  $effect(() => {
+    console.log('[LorebookTester] lorebooks updated, count:', lorebooks.length);
+  });
+
+  let unsubscribe: (() => void) | null = null;
+
+  onDestroy(() => {
+    if (unsubscribe) {
+      unsubscribe();
+      unsubscribe = null;
+    }
+  });
+
   let messages = $state<Message[]>([]);
   let conversationText = $state('');
   let isTesting = $state(false);
@@ -39,11 +54,32 @@
   let regexScripts = $state<Array<{ comment: string; in: string; out: string; type: string; flag?: string; ableFlag?: boolean }>>([]);
   let isChatExpanded = $state(false);
 
-  // first_mes.md와 정규식 스크립트 로드
+  // first_mes.md와 정규식 스크립트 로드 + WebSocket 파일 감지 설정
   $effect(() => {
     if (botName) {
       loadFirstMessage();
       loadRegexScripts();
+      
+      // 이전 구독 해제
+      if (unsubscribe) {
+        unsubscribe();
+      }
+      
+      // WebSocket 파일 감지 설정
+      console.log('[LorebookTester] Setting up file watcher for:', botName);
+      unsubscribe = botService.watchBot(botName, async (event) => {
+        console.log('[LorebookTester] File changed:', event);
+        
+        // first_mes.md 또는 regex 파일이 변경되면 다시 로드
+        if (event.path?.includes('first_mes.md')) {
+          console.log('[LorebookTester] Reloading first message');
+          await loadFirstMessage();
+        }
+        if (event.path?.includes('regex')) {
+          console.log('[LorebookTester] Reloading regex scripts');
+          await loadRegexScripts();
+        }
+      });
     }
   });
 
@@ -60,7 +96,7 @@
   }
 
   async function loadRegexScripts() {
-    regexScripts = await loadBotRegexScripts(botName);
+    regexScripts = await botService.loadRegexScripts(botName);
   }
 
   function handleMessagesChange(newMessages: Message[]) {

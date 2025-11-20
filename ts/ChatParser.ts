@@ -2,6 +2,7 @@
 
 import { processScriptFull } from '../../src/ts/process/scripts';
 import { runTrigger } from '../../src/ts/process/triggers';
+import { runLuaButtonTrigger } from '../../src/ts/process/scriptings';
 import { risuChatParser } from '../../src/ts/parser.svelte';
 import { getCurrentChat, getCurrentCharacter, setCurrentChat } from '../../src/ts/storage/database.svelte';
 import { editorState, saveEditorState } from '../lib/shared/editorState.svelte';
@@ -311,4 +312,47 @@ export function deleteMessage(index: number) {
   chat.message.splice(index, 1);
   setCurrentChat(chat);
   saveChatToLocalStorage();
+}
+
+// ============================================================================
+// Handle button triggers within chat messages (Lua buttons and triggers)
+// ============================================================================
+
+export async function handleButtonTriggerWithin(event: UIEvent) {
+  const currentChar = getCurrentCharacter();
+  if (currentChar?.type === 'group') {
+    return;
+  }
+
+  const target = event.target as HTMLElement;
+  const origin = target.closest('[risu-trigger], [risu-btn]');
+  if (!origin) {
+    return;
+  }
+
+  const triggerName = origin.getAttribute('risu-trigger');
+  const triggerId = origin.getAttribute('risu-id');
+  const btnEvent = origin.getAttribute('risu-btn');
+
+  console.log('[ChatParser] Button trigger detected:', { triggerName, triggerId, btnEvent });
+
+  const triggerResult =
+    triggerName ?
+      await runTrigger(currentChar, 'manual', {
+        chat: getCurrentChat(),
+        manualName: triggerName,
+        triggerId: triggerId || undefined,
+      }) :
+    btnEvent ?
+      await runLuaButtonTrigger(currentChar, btnEvent) :
+    null;
+
+  if (triggerResult) {
+    setCurrentChat(triggerResult.chat);
+    saveChatToLocalStorage();
+    console.log('[ChatParser] Trigger executed successfully');
+    return true;
+  }
+  
+  return false;
 }

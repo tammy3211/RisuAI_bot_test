@@ -18,6 +18,24 @@
 
   // 정규식 처리된 메시지 내용을 캐시
   let processedContents = $state<Map<string, string>>(new Map());
+  
+  // regexScripts가 변경되면 캐시 무효화
+  let lastRegexScriptsCount = $state(regexScripts.length);
+  $effect(() => {
+    if (regexScripts.length !== lastRegexScriptsCount) {
+      console.log('[ChatInterface] regexScripts changed, clearing cache');
+      lastRegexScriptsCount = regexScripts.length;
+      processedContents = new Map();
+    }
+  });
+
+  // props 변경 추적
+  $effect(() => {
+    console.log('[ChatInterface] Props updated:', {
+      firstMessage: firstMessage.substring(0, 50),
+      regexScriptsCount: regexScripts.length
+    });
+  });
 
   // 초기 메시지 (first_mes는 항상 맨 위)
   let messages = $state<Message[]>([
@@ -37,6 +55,7 @@
   $effect(() => {
     const firstMsg = messages.find(m => m.isFirstMessage);
     if (firstMsg && firstMsg.content !== firstMessage) {
+      console.log('[ChatInterface] firstMessage changed, updating from:', firstMsg.content.substring(0, 30), 'to:', firstMessage.substring(0, 30));
       messages = messages.map(m => 
         m.isFirstMessage ? { ...m, content: firstMessage } : m
       );

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { editorState } from '../shared/editorState.svelte';
   import BackgroundDom from '../../../src/lib/ChatScreens/BackgroundDom.svelte';
-  import { getCurrentChatData, updateMessage, deleteMessage, simulateUserInputFlow, simulateAIResponseFlow } from '../../ts/ChatParser';
+  import { getCurrentChatData, updateMessage, deleteMessage, simulateUserInputFlow, simulateAIResponseFlow, handleButtonTriggerWithin } from '../../ts/ChatParser';
 
   interface Props {
     onCollapse: () => void;
@@ -286,6 +286,16 @@
       onCollapse();
     }
   }
+
+  // Wrapper for handleButtonTriggerWithin with refresh callback
+  async function handleButtonClick(event: UIEvent) {
+    const success = await handleButtonTriggerWithin(event);
+    if (success && onRefresh) {
+      onRefresh();
+    }
+  }
+
+
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -356,6 +366,7 @@
                 class="flex justify-center border-y border-darkborderc items-center text-gray-100 p-3 peer-focus:border-textcolor transition-colors"
                 style:height={inputHeight}
                 disabled
+                aria-label="Processing"
               >
                 <div class="loadmove chat-process-stage-1"></div>
               </button>
@@ -364,6 +375,7 @@
                 onclick={send}
                 class="flex justify-center border-y border-darkborderc items-center text-gray-100 p-3 peer-focus:border-textcolor hover:bg-blue-500 transition-colors button-icon-send"
                 style:height={inputHeight}
+                aria-label="Send message"
               >
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="transform: rotate(90deg);">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
@@ -375,6 +387,7 @@
               class="peer-focus:border-textcolor mr-2 flex border-y border-r border-darkborderc justify-center items-center text-gray-100 p-3 rounded-r-md hover:bg-blue-500 transition-colors"
               style:height={inputHeight}
               disabled
+              aria-label="Menu"
             >
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
@@ -383,7 +396,9 @@
           </div>
           {#if renderedMessages.length > 0}
             {#each [...renderedMessages].reverse() as msg (msg.original.chatId ?? `${msg.idx}-${msg.original.time ?? msg.idx}`)}
-              <div class="chat-message-container risu-chat px-4">
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <div class="chat-message-container risu-chat px-4" onclick={handleButtonClick}>
                 <div class="text-textcolor mt-1 ml-4 mr-4 mb-1 p-2 bg-transparent flex-grow border-transparent flex items-start max-w-full">
                   <!-- RISUICON: Avatar -->
                   <div class="flex-shrink-0 shadow-lg bg-textcolor2 rounded-md flex items-center justify-center text-textcolor" 
@@ -497,7 +512,9 @@
 
           <!-- First Message -->
           {#if messages.length <= loadPages && rawFirstMessage}
-            <div class="chat-message-container risu-chat px-4">
+            <!-- svelte-ignore a11y_click_events_have_key_events -->
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div class="chat-message-container risu-chat px-4" onclick={handleButtonClick}>
               <div class="text-textcolor mt-1 ml-4 mr-4 mb-1 p-2 bg-transparent flex-grow border-transparent flex items-start max-w-full">
                 <!-- RISUICON: Bot Avatar -->
                 <div class="flex-shrink-0 shadow-lg bg-textcolor2 rounded-md flex items-center justify-center text-textcolor" 
@@ -557,26 +574,6 @@
   .chat-process-stage-1 {
     border-top: 0.4rem solid #60a5fa;
     border-left: 0.4rem solid #60a5fa;
-  }
-
-  .chat-process-stage-2 {
-    border-top: 0.4rem solid #db2777;
-    border-left: 0.4rem solid #db2777;
-  }
-
-  .chat-process-stage-3 {
-    border-top: 0.4rem solid #34d399;
-    border-left: 0.4rem solid #34d399;
-  }
-
-  .chat-process-stage-4 {
-    border-top: 0.4rem solid #8b5cf6;
-    border-left: 0.4rem solid #8b5cf6;
-  }
-
-  .autoload {
-    border-top: 0.4rem solid #10b981;
-    border-left: 0.4rem solid #10b981;
   }
   
   /* Loading animation */

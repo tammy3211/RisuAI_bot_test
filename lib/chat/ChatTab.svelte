@@ -4,8 +4,10 @@
   import BotSettings from '../shared/BotSettings.svelte';
   import ChatScreen from './ChatScreen.svelte';
   import { loadSelectedBotData } from '../shared/botLoader.svelte';
+  import { botService } from '../shared/botService';
 
   let chatScreenRef: any;
+  let unsubscribe: (() => void) | null = null;
 
   async function handleLoadBot() {
     if (editorState.botSource === 'saved' && editorState.selectedBot) {
@@ -17,6 +19,32 @@
       if (chatScreenRef?.loadFromStorage) {
         chatScreenRef.loadFromStorage();
       }
+      
+      // WebSocket 파일 감지 설정
+      setupFileWatcher();
+    }
+  }
+
+  function setupFileWatcher() {
+    // 이전 구독 해제
+    if (unsubscribe) {
+      unsubscribe();
+      unsubscribe = null;
+    }
+
+    if (editorState.selectedBot) {
+      console.log('[ChatTab] Setting up file watcher for:', editorState.selectedBot);
+      unsubscribe = botService.watchBot(editorState.selectedBot, async (event) => {
+        console.log('[ChatTab] File changed:', event);
+        
+        // 봇 데이터 다시 로드
+        await loadSelectedBotData();
+        
+        // ChatScreen 리프레시
+        if (chatScreenRef?.loadFromStorage) {
+          chatScreenRef.loadFromStorage();
+        }
+      });
     }
   }
 
@@ -25,50 +53,31 @@
     if (editorState.botSource === 'saved' && editorState.selectedBot) {
       handleLoadBot();
     }
+  });
 
-    // HMR 이벤트 리스너: 선택된 봇의 데이터 변경 시 자동 리로드
-    if (import.meta.hot) {
-      const handleBotsUpdated = async (payload: any) => {
-        console.log('🤖 [HMR] Bot data updated, reloading selected bot...', payload.data.path);
-
-        // 현재 선택된 봇의 데이터가 변경되었을 때만 리로드
-        if (editorState.botSource === 'saved' && editorState.selectedBot) {
-          await handleLoadBot();
-        }
-      };
-
-      import.meta.hot.on('bots-updated', handleBotsUpdated);
-
-      onDestroy(() => {
-        import.meta.hot?.off('bots-updated', handleBotsUpdated);
-      });
+  onDestroy(() => {
+    if (unsubscribe) {
+      unsubscribe();
+      unsubscribe = null;
     }
   });
 </script>
 
 <div class="space-y-7">
   <div class="rounded-xl border-l-4 border-indigo-400 bg-gradient-to-r from-sky-100 to-purple-100 p-6">
-    <h4 class="mb-4 text-xl font-semibold text-indigo-500">💬 채팅 테스트 (ChatParser 사용)</h4>
+    <h4 class="mb-4 text-xl font-semibold text-indigo-500">💬 채팅 테스트</h4>
     <ul class="space-y-2 text-sm leading-relaxed text-slate-700">
       <li class="flex gap-2">
         <span class="text-indigo-500">✓</span>
-        <span>원본 RisuAI의 processScriptFull, runTrigger, runLuaEditTrigger 사용</span>
+        <span>실제 RisuAI 채팅 파서를 사용하여 봇과의 대화를 시뮬레이션합니다</span>
       </li>
       <li class="flex gap-2">
         <span class="text-indigo-500">✓</span>
-        <span>User: 입력만 처리 (AI 응답 자동 생성 없음)</span>
+        <span>Regex, Lua, CBS 스크립트가 실시간으로 메시지에 적용됩니다</span>
       </li>
       <li class="flex gap-2">
         <span class="text-indigo-500">✓</span>
-        <span>AI 응답: 사용자가 직접 입력하여 파싱 적용</span>
-      </li>
-      <li class="flex gap-2">
-        <span class="text-indigo-500">✓</span>
-        <span>Regex, Lua, CBS 스크립트가 실시간으로 적용</span>
-      </li>
-      <li class="flex gap-2">
-        <span class="text-indigo-500">✓</span>
-        <span>실제 채팅 데이터 구조(mockDB) 사용</span>
+        <span>사용자 메시지와 AI 응답을 직접 입력하여 파싱 결과를 확인할 수 있습니다</span>
       </li>
     </ul>
   </div>

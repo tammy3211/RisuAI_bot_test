@@ -1,13 +1,15 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { editorState, saveEditorState } from './editorState.svelte';
   import { loadAllBots, loadSelectedBotData } from './botLoader.svelte';
+  import { botService } from './botService';
   
   interface Props {
     onLoadBot?: () => void;
   }
   
   let { onLoadBot }: Props = $props();
+  let unsubscribe: (() => void) | null = null;
   
   // 초기 로드 (한 번만 실행)
   onMount(async () => {
@@ -16,19 +18,56 @@
     // 저장된 봇이 선택되어 있으면 자동으로 로드
     if (editorState.botSource === 'saved' && editorState.selectedBot) {
       await loadSelectedBotData();
+      setupFileWatcher();
       if (onLoadBot) {
         onLoadBot();
       }
     }
   });
+
+  onDestroy(() => {
+    if (unsubscribe) {
+      unsubscribe();
+      unsubscribe = null;
+    }
+  });
+
+  // 파일 변경 감지 설정
+  function setupFileWatcher() {
+    // 이전 구독 해제
+    if (unsubscribe) {
+      unsubscribe();
+    }
+
+    if (editorState.selectedBot) {
+      console.log('[BotSourceSelector] Setting up file watcher for:', editorState.selectedBot);
+      unsubscribe = botService.watchBot(editorState.selectedBot, async (event) => {
+        console.log('[BotSourceSelector] File changed:', event);
+        
+        // 봇 데이터 다시 로드 (캐시 무효화됨)
+        await loadSelectedBotData();
+        
+        // 콜백 호출
+        if (onLoadBot) {
+          onLoadBot();
+        }
+      });
+    }
+  }
   
   // botSource 변경 시 저장
   async function handleBotSourceChange() {
     if (editorState.botSource === 'saved') {
       if (editorState.selectedBot) {
         await loadSelectedBotData();
+        setupFileWatcher();
       }
     } else {
+      // 커스텀 모드로 전환 시 구독 해제
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
+      }
       editorState.selectedBot = '';
       editorState.botName = '';
       editorState.botDescription = '';
@@ -44,11 +83,16 @@
   // selectedBot 변경 시 자동으로 봇 데이터 로드
   async function handleSelectedBotChange() {
     if (!editorState.selectedBot) {
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
+      }
       editorState.botName = '';
       editorState.botDescription = '';
       saveEditorState();
     } else {
       await loadSelectedBotData();
+      setupFileWatcher();
     }
 
     if (onLoadBot) {

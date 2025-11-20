@@ -9,8 +9,14 @@
 
   let { lorebooks, selectedLorebook = $bindable(), onSelectLorebook }: Props = $props();
 
+  // lorebooks props 변경 추적
+  $effect(() => {
+    console.log('[LorebookList] lorebooks updated, count:', lorebooks.length, lorebooks);
+  });
+
   // 폴더별로 그룹화된 로어북과 최상위 로어북
   let groupedLorebooks = $derived.by(() => {
+    console.log('[LorebookList] groupedLorebooks recomputing...');
     const folders = new Map<string, LorebookEntry[]>();
     const topLevel: LorebookEntry[] = [];
 
