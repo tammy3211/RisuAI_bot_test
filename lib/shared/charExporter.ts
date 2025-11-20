@@ -15,6 +15,12 @@ export function convertBotToCharacter(botData: BotData): any {
     });
   };
 
+  // Helper: 경로에서 확장자 추출
+  const getExtension = (path: string): string => {
+    const match = path.match(/\.(\w+)$/);
+    return match ? match[1] : 'png';
+  };
+
   // Lorebook 변환
   const globalLore = botData.lorebook.entries.map(lore => ({
     key: lore.key,
@@ -41,22 +47,50 @@ export function convertBotToCharacter(botData: BotData): any {
     localLore: []
   };
 
+  // ccAssets 생성: icon, emotion, x-risu-asset 모두 포함
+  const ccAssets: Array<{ type: string; uri: string; name: string; ext: string }> = [];
+
+  // Main icon 추가
+  if (botData.assets.main) {
+    ccAssets.push({
+      type: 'icon',
+      uri: botData.assets.main,
+      name: 'main',
+      ext: getExtension(botData.assets.main)
+    });
+  }
+
+  // Emotions 추가
+  for (const [name, path] of botData.assets.emotions) {
+    ccAssets.push({
+      type: 'emotion',
+      uri: path,
+      name: name,
+      ext: getExtension(path)
+    });
+  }
+
+  // Additional assets 추가
+  for (const [name, path, ext] of botData.assets.additional) {
+    ccAssets.push({
+      type: 'x-risu-asset',
+      uri: path,
+      name: name,
+      ext: ext || getExtension(path)
+    });
+  }
+
   const character = {
     type: 'character',
     name: botData.name,
     image: botData.assets.main || '',
     firstMessage: botData.firstMessage,
     desc: botData.description,
-    notes: '',
-    chats: botData.chats || [defaultChat],
-    chatFolders: [],
+    chats: [defaultChat],
     chatPage: 0,
-    viewScreen: 'emotion' as const,
-    bias: [],
-    emotionImages: botData.assets.emotions || [],
+    viewScreen: 'none' as const,
     globalLore: globalLore,
     chaId: generateUUID(),
-    sdData: [],
     customscript: botData.regex.scripts || [],
     triggerscript: botData.trigger.lua ? [{
       comment: 'Lua Script',
@@ -67,24 +101,10 @@ export function convertBotToCharacter(botData: BotData): any {
         code: botData.trigger.lua
       }]
     }] : [],
-    utilityBot: false,
-    exampleMessage: '',
-    removedQuotes: false,
-    creatorNotes: '',
-    systemPrompt: '',
-    postHistoryInstructions: '',
-    alternateGreetings: [],
     tags: ['RisuAI_bot_test'],
-    creator: '',
-    characterVersion: '1.0',
-    personality: '',
-    scenario: '',
     firstMsgIndex: -1,
-    replaceGlobalNote: '',
     backgroundHTML: botData.trigger.backgroundHTML || '',
-    additionalText: '',
-    ccAssets: botData.assets.ccAssets || [],
-    additionalAssets: botData.assets.additional || []
+    ccAssets: ccAssets
   };
 
   return character;
@@ -113,24 +133,68 @@ export async function exportBotAsCharX(botName: string): Promise<void> {
     }
 
     console.log('[charExporter] Image path:', botData.assets.main);
+    console.log('[charExporter] All assets:', botData.assets);
     console.log('[charExporter] Converting to character format...');
     
-    // Character 형식으로 변환
-    const character = convertBotToCharacter(botData);
-    console.log('[charExporter] Character converted:', character);
+    // 이미지를 임시로 forageStorage에 저장 (RisuAI가 읽을 수 있도록)
+    const { forageStorage } = await import('src/ts/globalApi.svelte');
     
-    console.log('[charExporter] Importing exportCharacterCard...');
+    // main 이미지 처리
+    const mainImagePath = botData.assets.main;
+    const mainImageResponse = await fetch(mainImagePath);
+    const mainImageBlob = await mainImageResponse.blob();
+    const mainImageBytes = new Uint8Array(await mainImageBlob.arrayBuffer());
     
-    // RisuAI의 exportCharacterCard 함수 사용
-    const { exportCharacterCard } = await import('src/ts/characterCards');
+    // forageStorage에 임시 저장 (원본 경로를 키로 사용)
+    await forageStorage.setItem(mainImagePath, mainImageBytes);
+    console.log('[charExporter] Saved main image to forageStorage:', mainImagePath);
     
-    console.log('[charExporter] Calling exportCharacterCard...');
-    await exportCharacterCard(character, 'charx', {
-      spec: 'v3'
-    });
+    // emotion 이미지들도 저장
+    for (const [, path] of botData.assets.emotions) {
+      const response = await fetch(path);
+      const blob = await response.blob();
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      await forageStorage.setItem(path, bytes);
+      console.log('[charExporter] Saved emotion image to forageStorage:', path);
+    }
     
-    console.log('[charExporter] Export complete!');
-    showSuccess(`"${botName}" CharX 파일 내보내기 완료!`);
+    // additional assets도 저장
+    for (const [, path] of botData.assets.additional) {
+      const response = await fetch(path);
+      const blob = await response.blob();
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      await forageStorage.setItem(path, bytes);
+      console.log('[charExporter] Saved additional asset to forageStorage:', path);
+    }
+    
+    try {
+      // Character 형식으로 변환
+      const character = convertBotToCharacter(botData);
+      console.log('[charExporter] Character converted:', character);
+      
+      console.log('[charExporter] Importing exportCharacterCard...');
+      
+      // RisuAI의 exportCharacterCard 함수 사용
+      const { exportCharacterCard } = await import('src/ts/characterCards');
+      
+      console.log('[charExporter] Calling exportCharacterCard...');
+      await exportCharacterCard(character, 'charx', {
+        spec: 'v3'
+      });
+      
+      console.log('[charExporter] Export complete!');
+      showSuccess(`"${botName}" CharX 파일 내보내기 완료!`);
+    } finally {
+      // forageStorage에서 임시 이미지 삭제
+      await forageStorage.removeItem(mainImagePath);
+      for (const [, path] of botData.assets.emotions) {
+        await forageStorage.removeItem(path);
+      }
+      for (const [, path] of botData.assets.additional) {
+        await forageStorage.removeItem(path);
+      }
+      console.log('[charExporter] Cleaned up temporary images from forageStorage');
+    }
     
   } catch (error) {
     console.error('[charExporter] Export failed:', error);
@@ -171,12 +235,7 @@ export async function exportBotAsJSON(botName: string): Promise<void> {
     console.error('[charExporter] Export failed:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     
-    try {
-      const { alertError } = await import('src/ts/alert');
-      alertError(`JSON 내보내기 실패: ${errorMessage}`);
-    } catch {
-      alert(`JSON 내보내기 실패: ${errorMessage}`);
-    }
+    showError(`JSON 내보내기 실패:\n${errorMessage}`);
   }
 }
 
@@ -211,11 +270,6 @@ export async function exportBotAsPNG(botName: string): Promise<void> {
     console.error('[charExporter] Export failed:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     
-    try {
-      const { alertError } = await import('src/ts/alert');
-      alertError(`PNG 내보내기 실패: ${errorMessage}`);
-    } catch {
-      alert(`PNG 내보내기 실패: ${errorMessage}`);
-    }
+    showError(`PNG 내보내기 실패:\n${errorMessage}`);
   }
 }
