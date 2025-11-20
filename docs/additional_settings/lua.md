@@ -343,6 +343,7 @@ end
 
 ## 📚 참고 자료
 
+- **CBS 문법**: [`cbs.md`](cbs.md) - CBS 템플릿 사용법 (`cbs()` 함수 참고)
 - **Lua 함수 정의**: [`src/ts/process/scriptings.ts`](https://github.com/kwaroran/RisuAI/blob/main/src/ts/process/scriptings.ts) (Line 1146~1295)
 - **API 함수 목록**: [`src/ts/process/scriptings.ts`](https://github.com/kwaroran/RisuAI/blob/main/src/ts/process/scriptings.ts) (Line 120~320)
 

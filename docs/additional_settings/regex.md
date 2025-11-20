@@ -185,7 +185,7 @@ out/
 - `{{#when 조건}}...{{/when}}` : 조건문
 - `{{raw::assetname}}` : 에셋 경로
 
-> 자세한 CBS 문법은 `lorebook.md`의 CBS 섹션을 참고하세요.
+> 자세한 CBS 문법은 [`cbs.md`](cbs.md)를 참고하세요.
 
 ## 🎨 HTML/CSS 사용 시 주의사항
 
@@ -377,9 +377,9 @@ regex/
 
 ## 📚 참고 자료
 
+- **CBS 문법**: [`cbs.md`](cbs.md) - CBS 템플릿 사용법
 - **정규식 스크립트 타입 정의**: [`src/ts/process/scripts.ts`](https://github.com/kwaroran/RisuAI/blob/main/src/ts/process/scripts.ts) (Line 18)
 - **스크립트 처리 로직**: [`src/ts/process/scripts.ts`](https://github.com/kwaroran/RisuAI/blob/main/src/ts/process/scripts.ts)
-- **CBS 함수 목록**: [`src/ts/cbs.ts`](https://github.com/kwaroran/RisuAI/blob/main/src/ts/cbs.ts)
 
 ## ⚠️ 주의사항
 
