@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { editorState } from '../shared/editorState.svelte';
   import BotSettings from '../shared/BotSettings.svelte';
   import ChatScreen from './ChatScreen.svelte';
@@ -24,6 +24,24 @@
   onMount(() => {
     if (editorState.botSource === 'saved' && editorState.selectedBot) {
       handleLoadBot();
+    }
+
+    // HMR 이벤트 리스너: 선택된 봇의 데이터 변경 시 자동 리로드
+    if (import.meta.hot) {
+      const handleBotsUpdated = async (payload: any) => {
+        console.log('🤖 [HMR] Bot data updated, reloading selected bot...', payload.data.path);
+
+        // 현재 선택된 봇의 데이터가 변경되었을 때만 리로드
+        if (editorState.botSource === 'saved' && editorState.selectedBot) {
+          await handleLoadBot();
+        }
+      };
+
+      import.meta.hot.on('bots-updated', handleBotsUpdated);
+
+      onDestroy(() => {
+        import.meta.hot?.off('bots-updated', handleBotsUpdated);
+      });
     }
   });
 </script>

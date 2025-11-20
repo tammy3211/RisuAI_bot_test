@@ -2,43 +2,33 @@
 import type { LorebookEntry } from '../../ts/mockDatabase';
 import { editorState, saveEditorState } from './editorState.svelte';
 
-// import.meta.glob으로 모든 description.md 파일 가져오기
-// 절대 경로 사용 (Vite root 기준)
-const botDescriptions = import.meta.glob('/save/**/description.md', {
-  query: '?raw',
-  import: 'default',
-  eager: false
-});
-
-// 폴더 이름에서 봇 이름 추출
-function extractBotName(path: string): string {
-  // '/save/name/description.md' -> 'name'
-  const match = path.match(/\/save\/([^/]+)\//);
-  return match ? match[1] : '';
-}
-
-// 모든 봇 로드
+// 모든 봇 로드 (API를 통해 동적으로 가져오기)
 export async function loadAllBots() {
-  const bots: string[] = [];
-  
-  for (const path of Object.keys(botDescriptions)) {
-    const botName = extractBotName(path);
-    if (botName) {
-      bots.push(botName);
+  try {
+    const response = await fetch('/api/bots');
+    if (!response.ok) {
+      console.error('[botLoader] Failed to fetch bots:', response.statusText);
+      return [];
     }
+
+    const data = await response.json();
+    const bots = data.bots || [];
+    
+    console.log('[botLoader] Found bots:', bots);
+    
+    // editorState 업데이트는 하되, 변경사항이 있을 때만 저장
+    const hasChanged = JSON.stringify(editorState.savedBots) !== JSON.stringify(bots);
+    editorState.savedBots = bots;
+    
+    if (hasChanged) {
+      saveEditorState();
+    }
+    
+    return bots;
+  } catch (error) {
+    console.error('[botLoader] Failed to load bots:', error);
+    return [];
   }
-  
-  const sortedBots = bots.sort();
-  
-  // editorState 업데이트는 하되, 변경사항이 있을 때만 저장
-  const hasChanged = JSON.stringify(editorState.savedBots) !== JSON.stringify(sortedBots);
-  editorState.savedBots = sortedBots;
-  
-  if (hasChanged) {
-    saveEditorState();
-  }
-  
-  return sortedBots;
 }
 
 // 특정 봇의 description 로드 (fetch 사용으로 HMR 지원)

@@ -3,6 +3,7 @@
   import LorebookTab from './lib/lorebook/LorebookTab.svelte';
   import RegexTab from './lib/regex/RegexTab.svelte';
   import CBSTab from './lib/cbs/CBSTab.svelte';
+  import AlertContainer from './lib/shared/AlertContainer.svelte';
   
   let activeTab = $state('chat');
   
@@ -62,6 +63,9 @@
     <p>Active Tab: {activeTab}</p>
   </div>
 </div>
+
+<!-- Global Alert Container -->
+<AlertContainer />
 
 <style>
   * {

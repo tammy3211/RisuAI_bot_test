@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { loadAllBots } from './botLoader.svelte';
   import { editorState, saveEditorState } from './editorState.svelte';
   import { exportBotAsCharX } from './charExporter';
+  import { showError, showSuccess, showWarning } from './alert.svelte';
 
   interface Props {
     onSelectBot?: (botName: string) => void;
@@ -13,10 +14,27 @@
   let botList = $state<string[]>([]);
   let loading = $state(false);
   let exportingBot = $state<string | null>(null);
+  let creatingBot = $state(false);
+  let showCreateDialog = $state(false);
+  let newBotName = $state('');
 
   // Load bot list on mount (once)
   onMount(() => {
     loadBots();
+
+    // HMR 이벤트 리스너: 파일 변경 시 자동으로 봇 목록 갱신
+    if (import.meta.hot) {
+      const handleBotsUpdated = async (payload: any) => {
+        console.log('🤖 [HMR] Bots updated, reloading list...', payload.data.path);
+        await loadBots();
+      };
+
+      import.meta.hot.on('bots-updated', handleBotsUpdated);
+
+      onDestroy(() => {
+        import.meta.hot?.off('bots-updated', handleBotsUpdated);
+      });
+    }
   });
 
   async function loadBots() {
@@ -52,18 +70,78 @@
       exportingBot = null;
     }
   }
+
+  function openCreateDialog() {
+    showCreateDialog = true;
+    newBotName = '';
+  }
+
+  function closeCreateDialog() {
+    showCreateDialog = false;
+    newBotName = '';
+  }
+
+  async function handleCreateBot() {
+    if (!newBotName.trim()) {
+      showWarning('봇 이름을 입력해주세요.');
+      return;
+    }
+
+    creatingBot = true;
+    try {
+      const response = await fetch('/api/bot/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ botName: newBotName.trim() })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 409) {
+          showError('이미 존재하는 봇 이름입니다.');
+        } else {
+          showError(`봇 생성 실패: ${result.error || '알 수 없는 오류'}`);
+        }
+        return;
+      }
+
+      // Success - reload bot list and select new bot
+      await loadBots();
+      handleSelectBot(result.botName);
+      closeCreateDialog();
+      showSuccess(`봇 "${result.botName}"이(가) 성공적으로 생성되었습니다!`);
+    } catch (error) {
+      console.error('Failed to create bot:', error);
+      showError('봇 생성 중 오류가 발생했습니다.');
+    } finally {
+      creatingBot = false;
+    }
+  }
+
+  function handleKeydown(event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      handleCreateBot();
+    } else if (event.key === 'Escape') {
+      closeCreateDialog();
+    }
+  }
 </script>
 
 <div class="flex h-full flex-col rounded-xl bg-gray-100/80 p-5">
   <div class="mb-4 flex items-center justify-between border-b-2 border-gray-300 pb-2">
     <h3 class="text-lg font-semibold text-gray-700">📚 봇 목록</h3>
-    <button
-      class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-lg transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
-      onclick={loadBots}
-      disabled={loading}
-    >
-      {loading ? '⏳' : '🔄'}
-    </button>
+    <div class="flex gap-2">
+      <button
+        class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-lg transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
+        onclick={loadBots}
+        disabled={loading}
+      >
+        {loading ? '⏳' : '🔄'}
+      </button>
+    </div>
   </div>
 
   {#if loading}
@@ -116,6 +194,59 @@
           </div>
         </div>
       {/each}
+      <button
+        class="flex w-full items-center gap-3 rounded-lg border-2 border-gray-300 bg-white px-4 py-3 text-left font-medium text-gray-700 transition-transform duration-150 hover:border-blue-400 hover:scale-[0.98] focus:outline-none"
+        onclick={openCreateDialog}
+        disabled={loading}
+        title="새 봇 추가"
+      >
+        +
+      </button>
     </div>
   {/if}
+
 </div>
+
+<!-- Create Bot Dialog -->
+{#if showCreateDialog}
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onclick={closeCreateDialog}>
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="w-96 rounded-lg bg-white p-6 shadow-xl" onclick={(e) => e.stopPropagation()}>
+      <h2 class="mb-4 text-xl font-bold text-gray-800">새 봇 생성</h2>
+      
+      <div class="mb-4">
+        <label for="bot-name-input" class="mb-2 block text-sm font-medium text-gray-700">
+          봇 이름
+        </label>
+        <input
+          id="bot-name-input"
+          type="text"
+          class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+          bind:value={newBotName}
+          onkeydown={handleKeydown}
+          placeholder="봇 이름을 입력하세요"
+        />
+      </div>
+
+      <div class="flex justify-end gap-2">
+        <button
+          class="rounded-md border border-gray-300 bg-white px-4 py-2 text-gray-700 transition hover:bg-gray-100"
+          onclick={closeCreateDialog}
+          disabled={creatingBot}
+        >
+          취소
+        </button>
+        <button
+          class="rounded-md border border-blue-500 bg-blue-500 px-4 py-2 text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+          onclick={handleCreateBot}
+          disabled={creatingBot || !newBotName.trim()}
+        >
+          {creatingBot ? '생성 중...' : '생성'}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}

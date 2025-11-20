@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { editorState } from '../shared/editorState.svelte';
   import Modal from '../UI/Modal.svelte';
   import RisuAIoriginScreen from './RisuAIoriginScreen.svelte';
@@ -14,6 +14,7 @@
     loadChatFromLocalStorage
   } from '../../ts/ChatParser';
   import type { Message } from '../../ts/mockDatabase';
+  import { loadSelectedBotData } from '../shared/botLoader.svelte';
 
   // Chat state
   type DisplayMessage = Message & { displayText: string };
@@ -134,6 +135,32 @@
       }
     } else if (currentBotName === null && bot) {
       currentBotName = bot;
+    }
+  });
+
+  onMount(() => {
+    // HMR 이벤트 리스너: 파일 변경 시 봇 데이터 리로드 후 화면 갱신
+    if (import.meta.hot) {
+      const handleBotsUpdated = async (payload: any) => {
+        console.log('🤖 [ChatScreen HMR] Bot data updated, reloading...', payload.data.path);
+        
+        // 현재 선택된 봇이 있으면 데이터 리로드
+        if (editorState.botSource === 'saved' && editorState.selectedBot) {
+          // 봇 데이터 리로드
+          await loadSelectedBotData();
+          
+          // 화면 강제 갱신 (첫 메시지 포함)
+          await hydrateMessages(true);
+          
+          console.log('✅ [ChatScreen HMR] Screen refreshed with new data');
+        }
+      };
+
+      import.meta.hot.on('bots-updated', handleBotsUpdated);
+
+      onDestroy(() => {
+        import.meta.hot?.off('bots-updated', handleBotsUpdated);
+      });
     }
   });
 

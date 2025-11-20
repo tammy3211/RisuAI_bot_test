@@ -2,6 +2,7 @@ import type { Plugin, ViteDevServer } from 'vite';
 
 export function watchBotsPlugin(): Plugin {
   let server: ViteDevServer;
+  let timer: NodeJS.Timeout;
 
   return {
     name: 'watch-bots',
@@ -12,17 +13,19 @@ export function watchBotsPlugin(): Plugin {
       server.watcher.add('save/**/*');
 
       server.watcher.on('change', (path) => {
-        // save 폴더 내 모든 파일 변경 시 리로드
-        if (path.includes('save')) {
-          console.log('🔄 [watch-bots] File changed:', path);
-          console.log('🔄 [watch-bots] Triggering full page reload...');
-          
-          // 전체 페이지 리로드 트리거
+        if (!path.includes('save')) return;
+
+        console.log('🤖 [watch-bots] File changed:', path);
+
+        // 디바운스: 200ms 동안 같은 이벤트가 여러 번 오면 마지막 것만 처리
+        clearTimeout(timer);
+        timer = setTimeout(() => {
           server.ws.send({
-            type: 'full-reload',
-            path: '*'
+            type: 'custom',
+            event: 'bots-updated',
+            data: { path },
           });
-        }
+        }, 200);
       });
     }
   };
