@@ -4,6 +4,7 @@
   import { editorState, saveEditorState } from './editorState.svelte';
   import { exportBotAsCharX } from './charExporter';
   import { showError, showSuccess, showWarning } from './alert.svelte';
+  import { botService } from './botService';
 
   interface Props {
     onSelectBot?: (botName: string) => void;
@@ -32,7 +33,7 @@
       import.meta.hot.on('bots-updated', handleBotsUpdated);
 
       onDestroy(() => {
-        import.meta.hot?.off('bots-updated', handleBotsUpdated);
+        // Vite HMR doesn't have off() method, cleanup happens automatically
       });
     }
   });
@@ -89,33 +90,20 @@
 
     creatingBot = true;
     try {
-      const response = await fetch('/api/bot/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ botName: newBotName.trim() })
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        if (response.status === 409) {
-          showError('이미 존재하는 봇 이름입니다.');
-        } else {
-          showError(`봇 생성 실패: ${result.error || '알 수 없는 오류'}`);
-        }
-        return;
-      }
+      const createdBotName = await botService.createBot(newBotName.trim());
 
       // Success - reload bot list and select new bot
       await loadBots();
-      handleSelectBot(result.botName);
+      handleSelectBot(createdBotName);
       closeCreateDialog();
-      showSuccess(`봇 "${result.botName}"이(가) 성공적으로 생성되었습니다!`);
+      showSuccess(`봇 "${createdBotName}"이(가) 성공적으로 생성되었습니다!`);
     } catch (error) {
       console.error('Failed to create bot:', error);
-      showError('봇 생성 중 오류가 발생했습니다.');
+      if (error instanceof Error && error.message.includes('already exists')) {
+        showError('이미 존재하는 봇 이름입니다.');
+      } else {
+        showError(`봇 생성 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+      }
     } finally {
       creatingBot = false;
     }

@@ -159,7 +159,7 @@
       import.meta.hot.on('bots-updated', handleBotsUpdated);
 
       onDestroy(() => {
-        import.meta.hot?.off('bots-updated', handleBotsUpdated);
+        // Vite HMR doesn't have off() method, cleanup happens automatically
       });
     }
   });

@@ -75,7 +75,14 @@ export async function loadSelectedBotData() {
     // editorState 업데이트
     editorState.botName = botData.name;
     editorState.botDescription = botData.description;
-    editorState.regexScripts = botData.regex.scripts;
+    
+    // outFile이 있는 스크립트에 내용 채우기
+    const resolvedScripts = botData.regex.scripts.map(script => ({
+      ...script,
+      out: script.outFile ? (botData.regex.outFiles[script.outFile] || script.out) : script.out
+    }));
+    
+    editorState.regexScripts = resolvedScripts;
     editorState.lorebookEntries = botData.lorebook.entries;
 
     // mockDatabase 동기화
@@ -84,7 +91,7 @@ export async function loadSelectedBotData() {
       name: botData.name,
       description: botData.description,
       firstMessage: botData.firstMessage,
-      regexScripts: botData.regex.scripts,
+      regexScripts: resolvedScripts,
       lorebooks: botData.lorebook.entries,
       emotionImages: botData.assets.emotions,
       additionalAssets: botData.assets.additional,
@@ -111,7 +118,7 @@ export async function loadSelectedBotData() {
       name: botData.name,
       description: botData.description,
       firstMessage: botData.firstMessage,
-      regexScripts: botData.regex.scripts,
+      regexScripts: resolvedScripts,
       lorebooks: botData.lorebook.entries,
       emotionImages: botData.assets.emotions,
       additionalAssets: botData.assets.additional,

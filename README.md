@@ -136,6 +136,7 @@ save/내봇이름/
 
 ```
 RisuAI_bot_test/
+├── docs/                  # Agent를 위한 .md 파일
 ├── lib/                   # Svelte UI 컴포넌트
 │   ├── chat/              # 채팅 시뮬레이터 UI
 │   ├── regex/             # 정규식 에디터 & 테스터
