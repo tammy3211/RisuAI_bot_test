@@ -152,11 +152,14 @@ cutChat(triggerId, 0, 5)  -- 0~5번 메시지만 남김
 ### 상태 관리 함수
 
 ```lua
--- 상태 변수 가져오기
+-- 상태 변수 가져오기(string)
+local value = getChatVar(triggerId, "변수이름")
+
+-- 상태 변수 가져오기(json)
 local value = getState(triggerId, "변수이름")
 
 -- 상태 변수 설정
-setState(triggerId, "변수이름", "값")
+setChatVar(triggerId, "변수이름", "값")
 setState(triggerId, "숫자", 123)
 setState(triggerId, "테이블", {key = "value"})
 ```

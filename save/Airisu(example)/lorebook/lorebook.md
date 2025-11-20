@@ -73,7 +73,7 @@ lorebook/
 
 - `content` (string, 필수): 로어북 내용
   - **권장**: `{파일경로}` 형식으로 `/content/` 폴더의 `.md` 파일 참조
-  - 예: `"{world_setting}"` → `content/world_setting.md` 파일 사용
+  - 예: `"{world_setting.md}"` → `content/world_setting.md` 파일 사용
   - 짧은 내용은 직접 입력 가능: `"이것은 짧은 로어북입니다."`
 
 - `folder` (string): 속한 폴더의 key
@@ -127,7 +127,7 @@ lorebook/
   "comment": "주인공 V",
   "mode": "normal",
   "folder": "\uf000folder:characters",
-  "content": "{character_v}"
+  "content": "{character_v.md}"
 }
 ```
 
@@ -141,7 +141,7 @@ lorebook/
 
 1. **파일 생성**: `lorebook/content/world_setting.md` 파일 생성
 2. **내용 작성**: 마크다운 형식으로 로어북 내용 작성
-3. **JSON에서 참조**: `"content": "{world_setting}"`
+3. **JSON에서 참조**: `"content": "{world_setting.md}"`
 
 ### 폴더 구조 활용
 
@@ -149,9 +149,9 @@ lorebook/
 
 ```
 content/
-├── world/setting.md       # {world/setting}
-├── world/locations/city.md # {world/locations/city}
-└── characters/hero.md     # {characters/hero}
+├── world/setting.md       # {world/setting.md}
+├── world/locations/city.md # {world/locations/city.md}
+└── characters/hero.md     # {characters/hero.md}
 ```
 
 **참조 형식**: `{폴더명/파일명}` 또는 `{폴더명/서브폴더명/파일명}`
@@ -163,7 +163,7 @@ content/
 {
   "key": "세계, 세계관",
   "comment": "세계관 설정",
-  "content": "{world_setting}",
+  "content": "{world_setting.md}",
   "mode": "normal"
 }
 ```

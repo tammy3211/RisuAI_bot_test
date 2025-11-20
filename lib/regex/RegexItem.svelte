@@ -169,7 +169,7 @@
     <div class="flex flex-col gap-1.5">
       <label for="out-{regex.id}" class="text-sm font-semibold text-slate-600">OUT (교체할 내용)</label>
       {#if regex.outFile}
-        <div class="text-xs text-slate-500">md 파일: {regex.outFile}</div>
+        <div class="text-xs text-slate-500">out 파일: {regex.outFile}</div>
       {/if}
       <textarea 
         id="out-{regex.id}"

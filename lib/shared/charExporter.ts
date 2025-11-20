@@ -68,7 +68,7 @@ export function convertBotToCharacter(botData: BotData): any {
     postHistoryInstructions: '',
     alternateGreetings: [],
     tags: ['RisuAI_bot_test'],
-    creator: 'RisuAI Bot Editor',
+    creator: '',
     characterVersion: '1.0',
     personality: '',
     scenario: '',

@@ -63,24 +63,21 @@ export async function loadBotDescription(botName: string): Promise<string> {
   }
 }
 
-// 초기 로드는 제거 - 각 컴포넌트에서 필요할 때 호출하도록 변경
-// loadAllBots();
-
 /**
- * Load all markdown files from a nested directory structure recursively
+ * Load all files from a nested directory structure recursively
  * @param botName - Name of the bot to filter files for
  * @param baseFolder - Base folder name to extract relative paths from (e.g., 'content', 'out')
- * @returns Map of filename/path -> file content
+ * @returns Map of relative path -> file content
 */
-export async function loadNestedMarkdownFiles(
+export async function loadNestedFiles(
   botName: string,
   baseFolder: string
 ): Promise<Map<string, string>> {
   const fileMap = new Map<string, string>();
   
   try {
-    // Use Vite's glob import to find all .md files recursively
-    const modules = import.meta.glob('/save/**/*.md', { 
+    // Use Vite's glob import to find all files recursively
+    const modules = import.meta.glob('/save/**/*', { 
       eager: false, 
       query: '?raw', 
       import: 'default' 
@@ -94,30 +91,18 @@ export async function loadNestedMarkdownFiles(
       
       // Check if path includes the base folder
       const escapedBotName = botName.replace(/[()]/g, '\\$&');
-      const folderPattern = new RegExp(`/save/${escapedBotName}/${baseFolder.replace(/[()]/g, '\\$&')}/(.+\\.md)$`);
+      const folderPattern = new RegExp(`/save/${escapedBotName}/${baseFolder.replace(/[()]/g, '\\$&')}/(.+)$`);
       const match = path.match(folderPattern);
       
       if (match) {
-        const relativePath = match[1]; // e.g., "world_setting.md" or "folder/character_v.md"
+        const relativePath = match[1]; // e.g., "world_setting.md" or "folder/character_v.md" or "filters/text.md"
         
         try {
           const loader = modules[path] as () => Promise<string>;
           const content = await loader();
           
-          // Remove .md extension for the key
-          const keyWithoutExt = relativePath.replace(/\.md$/, '');
-          
-          // Store with key without extension (e.g., "world_setting")
-          fileMap.set(keyWithoutExt, content);
-          
-          // Also store with full relative path for nested files
+          // Store with exact relative path (including subdirectories and extension)
           fileMap.set(relativePath, content);
-          
-          // Store with just filename without extension
-          const fileName = relativePath.split('/').pop()?.replace(/\.md$/, '');
-          if (fileName && !fileMap.has(fileName)) {
-            fileMap.set(fileName, content);
-          }
         } catch (error) {
           console.warn(`[botLoader] Failed to load file: ${path}`, error);
         }
@@ -151,8 +136,8 @@ export async function loadBotRegexScripts(
       return [];
     }
     
-    // Load all MD files from regex/out/ directory
-    const outFiles = await loadNestedMarkdownFiles(botName, 'regex/out');
+    // Load all files from regex/out/ directory
+    const outFiles = await loadNestedFiles(botName, 'regex/out');
     
     // Resolve out content from files
     const resolvedScripts = await Promise.all(data.map(async (script: any, idx: number) => {
@@ -167,7 +152,7 @@ export async function loadBotRegexScripts(
         outFile = `${fallbackName}.md`;
       }
       
-      // Find matching MD file in out map
+      // Find exact matching file in out map (with full path including subdirectories)
       if (outFiles.has(outFile)) {
         out = outFiles.get(outFile) ?? '';
       } else if (!out) {
@@ -290,15 +275,15 @@ export async function loadBotAssets(
       const fileName = asset.name || '';
       const imgPath = `/save/${botName}/assets/${asset.uri}`;
       
-      if (asset.type === 'emotion') {
+      if (asset.type === 'icon' && asset.name === 'main') {
+        // Main icon
+        mainImage = imgPath;
+      } else if (asset.type === 'emotion') {
         // Emotion images: [name, path]
         emotionImages.push([fileName, imgPath]);
       } else if (asset.type === 'x-risu-asset') {
         // Additional assets: [name, path, ext]
         additionalAssets.push([fileName, imgPath, asset.ext || 'unknown']);
-      } else if (asset.type === 'icon' && asset.name === 'main') {
-        // Main icon
-        mainImage = imgPath;
       } else {
         // Other assets go to ccAssets
         ccAssets.push({
@@ -341,23 +326,23 @@ export async function loadBotLorebook(botName: string): Promise<LorebookEntry[]>
     
     const lorebooks: LorebookEntry[] = await response.json();
     
-    // Build a map of all MD files in content/ directory
-    const contentFiles = await loadNestedMarkdownFiles(botName, 'lorebook/content');
+    // Build a map of all files in content/ directory
+    const contentFiles = await loadNestedFiles(botName, 'lorebook/content');
     
-    // Load MD content for each lorebook entry
+    // Load content for each lorebook entry
     for (const entry of lorebooks) {
       const match = entry.content?.match(/^\{(.+?)\}$/);
       if (match) {
-        const mdFileName = match[1];
+        const fileName = match[1]; // e.g., "world_setting.md" or "subfolder/character.md"
         
-        // Find matching MD file in content map
-        if (contentFiles.has(mdFileName)) {
-          entry.mdContent = contentFiles.get(mdFileName);
-          entry.mdFile = mdFileName;
+        // Find exact matching file in content map (must match full path with extension)
+        if (contentFiles.has(fileName)) {
+          entry.mdContent = contentFiles.get(fileName);
+          entry.mdFile = fileName;
         } else {
-          console.warn(`[lorebookLoader] MD file not found: ${mdFileName}`);
+          console.warn(`[lorebookLoader] File not found: ${fileName}`);
           entry.mdContent = '';
-          entry.mdFile = mdFileName;
+          entry.mdFile = `File not found: ${fileName}`;
         }
       }
     }

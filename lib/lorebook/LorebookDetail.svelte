@@ -164,7 +164,7 @@
           <h3 class="mb-3 text-base font-semibold text-gray-700">📝 내용</h3>
           {#if lorebook.mdFile}
             <div class="mb-3 rounded-md bg-blue-100 p-3 text-sm text-blue-800">
-              📄 Markdown 파일: <code class="rounded bg-white px-2 py-0.5 font-mono">{lorebook.mdFile}.md</code>
+              📄 content 파일: <code class="rounded bg-white px-2 py-0.5 font-mono">{lorebook.mdFile}</code>
             </div>
           {/if}
           <div class="overflow-hidden rounded-lg border border-gray-300 bg-white">

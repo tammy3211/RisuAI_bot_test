@@ -183,6 +183,7 @@ out/
 - `{{random::옵션1::옵션2}}` : 랜덤 선택
 - `{{roll::2d6}}` : 주사위 굴리기
 - `{{#when 조건}}...{{/when}}` : 조건문
+- `{{raw::assetname}}` : 에셋 경로
 
 > 자세한 CBS 문법은 `lorebook.md`의 CBS 섹션을 참고하세요.
 

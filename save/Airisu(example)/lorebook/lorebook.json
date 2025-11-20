@@ -18,7 +18,7 @@
     "alwaysActive": false,
     "selective": true,
     "secondkey": "세계관 상세, 설정, 배경",
-    "content": "{world_setting}",
+    "content": "{world_setting.md}",
     "folder": "\uf000folder:world_info",
     "useRegex": false,
     "extentions": {
@@ -33,7 +33,7 @@
     "alwaysActive": false,
     "selective": true,
     "secondkey": "나이트 시티, Night City, 도시, city",
-    "content": "{location_nightcity}",
+    "content": "{location_nightcity.md}",
     "folder": "\uf000folder:world_info",
     "useRegex": false,
     "extentions": {
@@ -59,7 +59,7 @@
     "alwaysActive": false,
     "selective": true,
     "secondkey": "용병, mercenary, protagonist",
-    "content": "{folder/character_v}",
+    "content": "{folder/character_v.md}",
     "folder": "\uf000folder:characters",
     "useRegex": false,
     "extentions": {
@@ -74,7 +74,7 @@
     "alwaysActive": false,
     "selective": true,
     "secondkey": "과거, background, history, 어린시절",
-    "content": "{character_background}",
+    "content": "{character_background.md}",
     "folder": "\uf000folder:characters",
     "useRegex": false,
     "extentions": {
@@ -89,7 +89,21 @@
     "alwaysActive": true,
     "selective": false,
     "secondkey": "",
-    "content": "{important_rules}",
+    "content": "{important_rules.md}",
+    "useRegex": false,
+    "extentions": {
+      "risu_case_sensitive": false
+    }
+  },
+  {
+    "key": "test",
+    "comment": "test",
+    "insertorder": 100,
+    "mode": "normal",
+    "alwaysActive": true,
+    "selective": false,
+    "secondkey": "",
+    "content": "{test}",
     "useRegex": false,
     "extentions": {
       "risu_case_sensitive": false
