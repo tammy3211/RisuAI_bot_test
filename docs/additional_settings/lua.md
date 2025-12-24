@@ -120,6 +120,10 @@ local confirmed = alertConfirm(triggerId, "진행하시겠습니까?"):await()
 -- 특정 인덱스의 채팅 메시지 가져오기
 local chat = getChat(triggerId, 0)  -- { role, data, time }
 
+-- 마지막 채팅 가져오기
+getCharacterLastMessage(triggerId)   -- 캐릭터의 마지막 채팅
+getUserLastMessage(triggerId)    -- 유저의 마지막 채팅
+
 -- 채팅 메시지 설정
 setChat(triggerId, 0, "새로운 메시지")
 
@@ -348,6 +352,10 @@ end
 - **API 함수 목록**: [`src/ts/process/scriptings.ts`](https://github.com/kwaroran/RisuAI/blob/main/src/ts/process/scriptings.ts) (Line 120~320)
 
 ## ⚠️ 주의사항 및 제약
+
+### 함수 변동
+
+함수가 자주 바뀌거나 추가되기 때문에 `src/ts/process/scriptings.ts` 파일을 참고해서 작성해야 합니다.
 
 ### 보안 제약
 

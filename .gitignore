@@ -30,3 +30,8 @@ pnpm-debug.log*
 
 # Legacy code
 old_editor/
+
+# Save Folder
+!save/
+save/*
+!save/Airisu(example)/
